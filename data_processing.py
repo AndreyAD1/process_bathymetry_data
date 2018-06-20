@@ -1,12 +1,13 @@
-import csv
-import math
+from csv import reader
+from math import hypot
 import utm
+from openpyxl import load_workbook
 
 
 def get_input_data(file_name):
     try:
         with open(file_name, 'r', encoding='utf-8') as input_file:
-            file_reader = csv.reader(input_file, delimiter=';')
+            file_reader = reader(input_file, delimiter=';')
             data_list = []
             for row in file_reader:
                 data_list.append(row)
@@ -73,7 +74,7 @@ def convert_geocoordinates_to_utm(points):
 def get_distance_to_the_fairway_point(fairway_point, lat, long):
     fairway_point_lat = fairway_point['latitude']
     fairway_point_long = fairway_point['longitude']
-    distance = math.hypot(fairway_point_lat - lat, fairway_point_long - long)
+    distance = hypot(fairway_point_lat - lat, fairway_point_long - long)
     return distance
 
 
@@ -143,6 +144,12 @@ if __name__ == "__main__":
         exit('Can not find the file containing points along the fairway.')
     if logger_data is None:
         exit('Can not find the file containing logger coordinates.')
+    water_elevation_data = load_workbook('logger_data.xlsx', read_only=True)
+    # logger0 = water_elevation_data['0']
+    # for row in range(1, 20):
+    #     datetime = logger0.cell(column=1, row=row).value
+    #     water_elevation = logger0.cell(column=2, row=row).value
+    #     print(datetime, water_elevation)
 
     bathymetry_list_of_dicts = make_bathymetry_list(bathymetry_data)
     fairway_list_of_dicts = make_fairway_list(fairway_data)
@@ -162,7 +169,6 @@ if __name__ == "__main__":
             'logger coordinates.'
         )
 
-    print(logger_list_of_dicts)
     utm_bathymetry = convert_geocoordinates_to_utm(bathymetry_list_of_dicts)
     utm_fairway = convert_geocoordinates_to_utm(fairway_list_of_dicts)
     utm_loggers = convert_geocoordinates_to_utm(logger_list_of_dicts)
