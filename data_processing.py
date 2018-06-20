@@ -94,8 +94,26 @@ def get_distance_from_sea(points, fairway_points):
     return points
 
 
-def get_water_elevation(depth_point, logger_points):
-    # get_nearest_loggers()
+def get_nearest_loggers(distance_from_seashore, logger_list):
+    logger_list.sort(key=lambda x: x['distance_from_seashore'])
+    previous_logger = logger_list[0]
+    for logger in logger_list:
+        lower_logger = logger
+        upper_logger = logger
+        logger_distance = logger['distance_from_seashore']
+        if logger_distance >= distance_from_seashore:
+            lower_logger = previous_logger
+            return lower_logger, upper_logger
+        previous_logger = logger
+    return lower_logger, upper_logger
+
+
+def get_water_elevation(measurement_point, logger_points):
+    nearest_loggers = get_nearest_loggers(
+        measurement_point['distance_from_seashore'],
+        logger_points
+    )
+    # print(nearest_loggers)
     # point_time = get_point_time()
     # get_logger_water_elevations(point_time)
     # pass
