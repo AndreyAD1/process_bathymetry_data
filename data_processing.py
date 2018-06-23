@@ -2,9 +2,11 @@ from csv import reader
 from math import hypot
 import utm
 from openpyxl import load_workbook
+from collections import OrderedDict
+from datetime import datetime
 
 
-def get_input_data(file_name):
+def load_csv_data(file_name):
     try:
         with open(file_name, 'r', encoding='utf-8') as input_file:
             file_reader = reader(input_file, delimiter=';')
@@ -16,7 +18,19 @@ def get_input_data(file_name):
         return None
 
 
-def make_bathymetry_list(point_list):
+def load_input_data(csv_file_names, xlsx_file_name):
+    csv_files_content = []
+    for file_name in csv_file_names:
+        data = load_csv_data(csv_file_names[file_name])
+        csv_files_content.append(data)
+    try:
+        xlsx_workbook = load_workbook(xlsx_file_name, read_only=True)
+    except FileNotFoundError:
+        xlsx_workbook = None
+    return csv_files_content, xlsx_workbook
+
+
+def get_bathymetry_points(point_list):
     bathymetry_list = []
     for point in point_list:
         feature_names = ['longitude', 'latitude', 'depth', 'time']
@@ -31,7 +45,7 @@ def make_bathymetry_list(point_list):
     return bathymetry_list
 
 
-def make_fairway_list(point_list):
+def get_fairway_points(point_list):
     fairway_list = []
     for point in point_list:
         feature_names = ['longitude', 'latitude', 'distance_from_seashore']
@@ -45,7 +59,7 @@ def make_fairway_list(point_list):
     return fairway_list
 
 
-def make_logger_list(point_list):
+def get_logger_points(point_list):
     logger_list = []
     for point in point_list:
         feature_names = ['longitude', 'latitude', 'logger_name']
@@ -59,16 +73,17 @@ def make_logger_list(point_list):
     return logger_list
 
 
-def convert_geocoordinates_to_utm(points):
-    for point in points:
-        longitude = float(point['longitude'])
-        latitude = float(point['latitude'])
-        utm_longitude, utm_latitude, zone_num, zone_letter = utm.from_latlon(
-            latitude, longitude
-        )
-        point['longitude'] = utm_longitude
-        point['latitude'] = utm_latitude
-    return points
+def convert_geocoordinates_to_utm(dataset_list):
+    for dataset in dataset_list:
+        for point in dataset:
+            longitude = float(point['longitude'])
+            latitude = float(point['latitude'])
+            utm_longitude, utm_latitude, zone_num, zone_letter = utm.from_latlon(
+                latitude, longitude
+            )
+            point['longitude'] = utm_longitude
+            point['latitude'] = utm_latitude
+    return dataset_list
 
 
 def get_distance_to_the_fairway_point(fairway_point, lat, long):
@@ -109,21 +124,31 @@ def get_nearest_loggers(distance_from_seashore, logger_list):
     return lower_logger, upper_logger
 
 
-def get_water_elevation(measurement_point, logger_points):
-    nearest_loggers = get_nearest_loggers(
+def get_water_elevation(measurement_point, logger_points, logger_traces):
+    lower_log, upper_log = get_nearest_loggers(
         measurement_point['distance_from_seashore'],
         logger_points
     )
-    # print(nearest_loggers)
+    lower_log_name = lower_log['logger_name']
+    upper_log_name = upper_log['logger_name']
+    measurement_time = datetime.strptime(measurement_point['time'], '%d.%m.%Y %H:%M')
+    print(measurement_time)
+    print(logger_traces[lower_log_name])
+    lower_elevation = logger_traces[lower_log_name][measurement_time]
+    # print(lower_elevation)
     # point_time = get_point_time()
     # get_logger_water_elevations(point_time)
     # pass
     return 0
 
 
-def get_bottom_elevation(bathymetry_points, water_elevation_points):
+def get_bottom_elevation(bathymetry_points, logger_points, logger_data):
     for point in bathymetry_points:
-        water_elevation = get_water_elevation(point, water_elevation_points)
+        water_elevation = get_water_elevation(
+            point,
+            logger_points,
+            logger_data
+        )
         depth = point['depth']
         bottom_elevation = water_elevation - depth
         point['bottom_elevation'] = bottom_elevation
@@ -134,45 +159,95 @@ def output_result():
     pass
 
 
+def print_about_FileNotFoundError_and_exit(
+        bathymetry,
+        fairway_points,
+        logger_points,
+        water_elevation_info,
+        csv_filenames,
+        xlsx_filename
+):
+    if bathymetry is None:
+        exit('Can non find {}.'.format(csv_filenames['bathymetry']))
+    if fairway_points is None:
+        exit('Can not find {}.'.format(csv_filenames['points_along_fairway']))
+    if logger_points is None:
+        exit('Can not find {}.'.format(csv_filenames['logger_coordinates']))
+    if water_elevation_info is None:
+        exit('Can not find {}.'.format(xlsx_filename))
+    return
+
+
+def print_about_wrong_file_format_and_exit(
+        bathymetry,
+        fairway_info,
+        logger_info,
+        csv_filenames
+):
+    if bathymetry is None:
+        exit(
+            'The wrong format of data in {}.'.format(csv_filenames['bathymetry'])
+        )
+    if fairway_info is None:
+        exit(
+            'The wrong format of data in {}'.format(csv_filenames['points_along_fairway'])
+        )
+    if logger_info is None:
+        exit(
+            'The wrong format of data in {}'.format(csv_filenames['logger_coordinates'])
+        )
+    return
+
+
+def get_logger_data(xlsx_workbook):
+    all_loggers_data = {}
+    for sheet in xlsx_workbook:
+        logger_trace = {}
+        for row in sheet.iter_rows(min_row=2, max_col=2):
+            measurement_datetime = row[0].value
+            elevation = row[1].value
+            logger_trace[measurement_datetime] = elevation
+        all_loggers_data[sheet.title] = logger_trace
+    return all_loggers_data
+
+
 if __name__ == "__main__":
-    bathymetry_data = get_input_data('bathymetry.csv')
-    fairway_data = get_input_data('fairway_points.csv')
-    logger_data = get_input_data('logger_points.csv')
-    if bathymetry_data is None:
-        exit('Can non find the file containing bathymetry data.')
-    if fairway_data is None:
-        exit('Can not find the file containing points along the fairway.')
-    if logger_data is None:
-        exit('Can not find the file containing logger coordinates.')
-    water_elevation_data = load_workbook('logger_data.xlsx', read_only=True)
-    # logger0 = water_elevation_data['0']
-    # for row in range(1, 20):
-    #     datetime = logger0.cell(column=1, row=row).value
-    #     water_elevation = logger0.cell(column=2, row=row).value
-    #     print(datetime, water_elevation)
+    input_csv_filenames = OrderedDict([
+        ('bathymetry', 'bathymetry.csv'),
+        ('points_along_fairway', 'fairway_points.csv'),
+        ('logger_coordinates', 'logger_points.csv')
+    ])
+    water_elevation_filename = 'logger_data.xlsx'
+    csv_files_content, xlsx_file_workbook = load_input_data(
+        input_csv_filenames,
+        water_elevation_filename
+    )
+    bathymetry_data, fairway_data, loggers = csv_files_content
+    print_about_FileNotFoundError_and_exit(
+        bathymetry_data,
+        fairway_data,
+        loggers,
+        xlsx_file_workbook,
+        input_csv_filenames,
+        water_elevation_filename
+    )
 
-    bathymetry_list_of_dicts = make_bathymetry_list(bathymetry_data)
-    fairway_list_of_dicts = make_fairway_list(fairway_data)
-    logger_list_of_dicts = make_logger_list(logger_data)
-    if bathymetry_list_of_dicts is None:
-        exit(
-            'The wrong format of data in the file containing bathymetry data.'
-        )
-    if fairway_list_of_dicts is None:
-        exit(
-            'The wrong format of data in the file containing points '
-            'along the fairway.'
-        )
-    if logger_list_of_dicts is None:
-        exit(
-            'The wrong format of data in the file containing '
-            'logger coordinates.'
-        )
+    bathymetry_points = get_bathymetry_points(bathymetry_data)
+    fairway_points = get_fairway_points(fairway_data)
+    logger_points = get_logger_points(loggers)
+    water_elevation_data = get_logger_data(xlsx_file_workbook)
 
-    utm_bathymetry = convert_geocoordinates_to_utm(bathymetry_list_of_dicts)
-    utm_fairway = convert_geocoordinates_to_utm(fairway_list_of_dicts)
-    utm_loggers = convert_geocoordinates_to_utm(logger_list_of_dicts)
-    print(utm_loggers)
+    print_about_wrong_file_format_and_exit(
+        bathymetry_points,
+        fairway_points,
+        logger_points,
+        input_csv_filenames,
+    )
+    utm_bathymetry, utm_fairway, utm_loggers = convert_geocoordinates_to_utm([
+        bathymetry_points,
+        fairway_points,
+        logger_points
+    ])
     bathymetry_points_with_distance_from_sea = get_distance_from_sea(
         utm_bathymetry,
         utm_fairway
@@ -181,11 +256,10 @@ if __name__ == "__main__":
         utm_loggers,
         utm_fairway
     )
-
-    print(logger_points_with_distance_from_sea)
     bathymetry_points_with_bottom_elevation = get_bottom_elevation(
         bathymetry_points_with_distance_from_sea,
-        logger_points_with_distance_from_sea
+        logger_points_with_distance_from_sea,
+        water_elevation_data
     )
     print(bathymetry_points_with_bottom_elevation)
     output_result()
