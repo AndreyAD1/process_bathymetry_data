@@ -1,15 +1,25 @@
-from csv import reader
+import csv
 from math import hypot
 import utm
 from openpyxl import load_workbook
 from collections import OrderedDict
 from datetime import datetime, timedelta
+import os
+
+
+def get_bathymetry_file_names():
+    filenames_list = []
+    for entry in os.scandir('bathymetry_data/'):
+        file_root, file_extension = os.path.splitext(entry.path)
+        if file_extension == '.csv':
+            filenames_list.append(entry.name)
+    return filenames_list
 
 
 def load_csv_data(file_name):
     try:
-        with open(file_name, 'r', encoding='utf-8') as input_file:
-            file_reader = reader(input_file, delimiter=';')
+        with open(file_name, 'r', newline='', encoding='utf-8') as input_file:
+            file_reader = csv.reader(input_file, delimiter=';')
             data_list = []
             for row in file_reader:
                 data_list.append(row)
@@ -20,8 +30,8 @@ def load_csv_data(file_name):
 
 def load_input_data(csv_file_names, xlsx_file_name):
     csv_files_content = []
-    for file_name in csv_file_names:
-        data = load_csv_data(csv_file_names[file_name])
+    for file_type in csv_file_names:
+        data = load_csv_data(csv_file_names[file_type])
         csv_files_content.append(data)
     try:
         xlsx_workbook = load_workbook(xlsx_file_name, read_only=True)
@@ -77,7 +87,7 @@ def get_logger_data(xlsx_workbook):
     all_loggers_data = {}
     for sheet in xlsx_workbook:
         logger_trace = {}
-        for row in sheet.iter_rows(min_row=2, max_col=2):
+        for row in sheet.iter_rows(min_row=2, max_col=2, max_row=5):
             measurement_datetime = row[0].value
             elevation = row[1].value
             logger_trace[measurement_datetime] = elevation
@@ -198,10 +208,6 @@ def get_bottom_elevation(bathymetry):
     return bathymetry
 
 
-def output_result():
-    pass
-
-
 def print_about_FileNotFoundError_and_exit(
         bathymetry,
         fairway_points,
@@ -248,7 +254,29 @@ def print_about_wrong_file_format_and_exit(
     return
 
 
+def output_result(bathymetry_info):
+    field_names = [
+        'longitude',
+        'latitude',
+        'bottom_elevation',
+        'time',
+        'water_elevation',
+        'depth',
+        'distance_from_seashore'
+    ]
+    with open('output.csv', 'w', newline='', encoding='utf-8') as output_file:
+        writer = csv.DictWriter(
+            output_file,
+            fieldnames=field_names,
+            delimiter=';'
+        )
+        writer.writeheader()
+        for point in bathymetry_info:
+            writer.writerow(point)
+
+
 if __name__ == "__main__":
+    bathymetry_file_names = get_bathymetry_file_names()
     input_csv_filenames = OrderedDict([
         ('bathymetry', 'bathymetry.csv'),
         ('points_along_fairway', 'fairway_points.csv'),
@@ -295,4 +323,6 @@ if __name__ == "__main__":
         bathymetry_points
     )
 
-    output_result()
+    # output = prepare_output(bathymetry_points_with_bottom_elevation)
+
+    output_result(bathymetry_points_with_bottom_elevation)
