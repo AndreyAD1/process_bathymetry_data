@@ -3,7 +3,7 @@ from math import hypot
 import utm
 from openpyxl import load_workbook
 from collections import OrderedDict
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 def load_csv_data(file_name):
@@ -73,6 +73,18 @@ def get_logger_points(point_list):
     return logger_list
 
 
+def get_logger_data(xlsx_workbook):
+    all_loggers_data = {}
+    for sheet in xlsx_workbook:
+        logger_trace = {}
+        for row in sheet.iter_rows(min_row=2, max_col=2):
+            measurement_datetime = row[0].value
+            elevation = row[1].value
+            logger_trace[measurement_datetime] = elevation
+        all_loggers_data[sheet.title] = logger_trace
+    return all_loggers_data
+
+
 def convert_geocoordinates_to_utm(dataset_list):
     for dataset in dataset_list:
         for point in dataset:
@@ -84,6 +96,21 @@ def convert_geocoordinates_to_utm(dataset_list):
             point['longitude'] = utm_longitude
             point['latitude'] = utm_latitude
     return dataset_list
+
+
+def round_logger_datetime(logger_data):
+    for logger in logger_data:
+        logger_trace = logger_data[logger]
+        rounded_logger_data = {}
+        for measurement_datetime, water_elevation in logger_trace.items():
+            measurement_datetime += timedelta(seconds=30)
+            rounded_datetime = measurement_datetime-timedelta(
+                seconds=measurement_datetime.second,
+                microseconds=measurement_datetime.microsecond
+            )
+            rounded_logger_data[rounded_datetime] = water_elevation
+        logger_data[logger] = rounded_logger_data
+    return logger_data
 
 
 def get_distance_to_the_fairway_point(fairway_point, lat, long):
@@ -124,22 +151,40 @@ def get_nearest_loggers(distance_from_seashore, logger_list):
     return lower_logger, upper_logger
 
 
+def interpolate_water_surface(
+        lower_level,
+        upper_level,
+        lower_distance,
+        upper_distance,
+        measurement_distance
+):
+    water_slope = (lower_level-upper_level)/(lower_distance-upper_distance)
+    y_intercept = upper_level - water_slope*upper_distance
+    water_elevation = water_slope * measurement_distance + y_intercept
+    return water_elevation
+
+
 def get_water_elevation(measurement_point, logger_points, logger_traces):
     lower_log, upper_log = get_nearest_loggers(
         measurement_point['distance_from_seashore'],
         logger_points
     )
+    measurement_time = datetime.strptime(
+        measurement_point['time'],
+        '%d.%m.%Y %H:%M'
+    )
     lower_log_name = lower_log['logger_name']
     upper_log_name = upper_log['logger_name']
-    measurement_time = datetime.strptime(measurement_point['time'], '%d.%m.%Y %H:%M')
-    print(measurement_time)
-    print(logger_traces[lower_log_name])
     lower_elevation = logger_traces[lower_log_name][measurement_time]
-    # print(lower_elevation)
-    # point_time = get_point_time()
-    # get_logger_water_elevations(point_time)
-    # pass
-    return 0
+    upper_elevation = logger_traces[upper_log_name][measurement_time]
+    water_elevation = interpolate_water_surface(
+        lower_elevation,
+        upper_elevation,
+        lower_log['distance_from_seashore'],
+        upper_log['distance_from_seashore'],
+        measurement_point['distance_from_seashore']
+    )
+    return water_elevation
 
 
 def get_bottom_elevation(bathymetry_points, logger_points, logger_data):
@@ -199,18 +244,6 @@ def print_about_wrong_file_format_and_exit(
     return
 
 
-def get_logger_data(xlsx_workbook):
-    all_loggers_data = {}
-    for sheet in xlsx_workbook:
-        logger_trace = {}
-        for row in sheet.iter_rows(min_row=2, max_col=2):
-            measurement_datetime = row[0].value
-            elevation = row[1].value
-            logger_trace[measurement_datetime] = elevation
-        all_loggers_data[sheet.title] = logger_trace
-    return all_loggers_data
-
-
 if __name__ == "__main__":
     input_csv_filenames = OrderedDict([
         ('bathymetry', 'bathymetry.csv'),
@@ -256,10 +289,14 @@ if __name__ == "__main__":
         utm_loggers,
         utm_fairway
     )
+
+    water_elevation_data = round_logger_datetime(water_elevation_data)
+
     bathymetry_points_with_bottom_elevation = get_bottom_elevation(
         bathymetry_points_with_distance_from_sea,
         logger_points_with_distance_from_sea,
         water_elevation_data
     )
+
     print(bathymetry_points_with_bottom_elevation)
     output_result()
