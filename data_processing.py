@@ -90,11 +90,11 @@ def convert_geocoordinates_to_utm(dataset_list):
         for point in dataset:
             longitude = float(point['longitude'])
             latitude = float(point['latitude'])
-            utm_longitude, utm_latitude, zone_num, zone_letter = utm.from_latlon(
+            utm_long, utm_lat, zone_num, zone_letter = utm.from_latlon(
                 latitude, longitude
             )
-            point['longitude'] = utm_longitude
-            point['latitude'] = utm_latitude
+            point['longitude'] = utm_long
+            point['latitude'] = utm_lat
     return dataset_list
 
 
@@ -164,40 +164,38 @@ def interpolate_water_surface(
     return water_elevation
 
 
-def get_water_elevation(measurement_point, logger_points, logger_traces):
-    lower_log, upper_log = get_nearest_loggers(
-        measurement_point['distance_from_seashore'],
-        logger_points
-    )
-    measurement_time = datetime.strptime(
-        measurement_point['time'],
-        '%d.%m.%Y %H:%M'
-    )
-    lower_log_name = lower_log['logger_name']
-    upper_log_name = upper_log['logger_name']
-    lower_elevation = logger_traces[lower_log_name][measurement_time]
-    upper_elevation = logger_traces[upper_log_name][measurement_time]
-    water_elevation = interpolate_water_surface(
-        lower_elevation,
-        upper_elevation,
-        lower_log['distance_from_seashore'],
-        upper_log['distance_from_seashore'],
-        measurement_point['distance_from_seashore']
-    )
-    return water_elevation
-
-
-def get_bottom_elevation(bathymetry_points, logger_points, logger_data):
-    for point in bathymetry_points:
-        water_elevation = get_water_elevation(
-            point,
-            logger_points,
-            logger_data
+def get_water_elevation(bathymetry, logger_points, logger_traces):
+    for measurement_point in bathymetry:
+        lower_log, upper_log = get_nearest_loggers(
+            measurement_point['distance_from_seashore'],
+            logger_points
         )
+        measurement_time = datetime.strptime(
+            measurement_point['time'],
+            '%d.%m.%Y %H:%M'
+        )
+        lower_log_name = lower_log['logger_name']
+        upper_log_name = upper_log['logger_name']
+        lower_elevation = logger_traces[lower_log_name][measurement_time]
+        upper_elevation = logger_traces[upper_log_name][measurement_time]
+        water_elevation = interpolate_water_surface(
+            lower_elevation,
+            upper_elevation,
+            lower_log['distance_from_seashore'],
+            upper_log['distance_from_seashore'],
+            measurement_point['distance_from_seashore']
+        )
+        measurement_point['water_elevation'] = water_elevation
+    return bathymetry
+
+
+def get_bottom_elevation(bathymetry):
+    for point in bathymetry:
+        water_elevation = point['water_elevation']
         depth = point['depth']
         bottom_elevation = water_elevation - depth
         point['bottom_elevation'] = bottom_elevation
-    return bathymetry_points
+    return bathymetry
 
 
 def output_result():
@@ -231,15 +229,21 @@ def print_about_wrong_file_format_and_exit(
 ):
     if bathymetry is None:
         exit(
-            'The wrong format of data in {}.'.format(csv_filenames['bathymetry'])
+            'The wrong format of data in {}.'.format(
+                csv_filenames['bathymetry']
+            )
         )
     if fairway_info is None:
         exit(
-            'The wrong format of data in {}'.format(csv_filenames['points_along_fairway'])
+            'The wrong format of data in {}'.format(
+                csv_filenames['points_along_fairway']
+            )
         )
     if logger_info is None:
         exit(
-            'The wrong format of data in {}'.format(csv_filenames['logger_coordinates'])
+            'The wrong format of data in {}'.format(
+                csv_filenames['logger_coordinates']
+            )
         )
     return
 
@@ -264,12 +268,10 @@ if __name__ == "__main__":
         input_csv_filenames,
         water_elevation_filename
     )
-
     bathymetry_points = get_bathymetry_points(bathymetry_data)
     fairway_points = get_fairway_points(fairway_data)
     logger_points = get_logger_points(loggers)
     water_elevation_data = get_logger_data(xlsx_file_workbook)
-
     print_about_wrong_file_format_and_exit(
         bathymetry_points,
         fairway_points,
@@ -281,22 +283,16 @@ if __name__ == "__main__":
         fairway_points,
         logger_points
     ])
-    bathymetry_points_with_distance_from_sea = get_distance_from_sea(
-        utm_bathymetry,
-        utm_fairway
-    )
-    logger_points_with_distance_from_sea = get_distance_from_sea(
-        utm_loggers,
-        utm_fairway
-    )
-
+    bathymetry_points = get_distance_from_sea(utm_bathymetry, utm_fairway)
+    logger_points = get_distance_from_sea(utm_loggers, utm_fairway)
     water_elevation_data = round_logger_datetime(water_elevation_data)
-
-    bathymetry_points_with_bottom_elevation = get_bottom_elevation(
-        bathymetry_points_with_distance_from_sea,
-        logger_points_with_distance_from_sea,
+    bathymetry_points = get_water_elevation(
+        bathymetry_points,
+        logger_points,
         water_elevation_data
     )
+    bathymetry_points_with_bottom_elevation = get_bottom_elevation(
+        bathymetry_points
+    )
 
-    print(bathymetry_points_with_bottom_elevation)
     output_result()
