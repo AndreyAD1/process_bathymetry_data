@@ -1,5 +1,5 @@
 import csv
-from math import hypot
+from math import hypot, inf
 import utm
 from openpyxl import load_workbook
 from collections import OrderedDict
@@ -7,23 +7,24 @@ from datetime import datetime, timedelta
 import os
 
 
-def get_bathymetry_file_names():
+def get_bathymetry_file_paths():
     filenames_list = []
     for entry in os.scandir('bathymetry_data/'):
         file_root, file_extension = os.path.splitext(entry.path)
         if file_extension == '.csv':
-            filenames_list.append(entry.name)
+            filenames_list.append(entry.path)
     return filenames_list
 
 
-def load_csv_data(file_name):
+def load_csv_data(file_name_list):
     try:
-        with open(file_name, 'r', newline='', encoding='utf-8') as input_file:
-            file_reader = csv.reader(input_file, delimiter=';')
+        for file_name in file_name_list:
             data_list = []
-            for row in file_reader:
-                data_list.append(row)
-            return data_list
+            with open(file_name, 'r', newline='', encoding='utf-8') as input_file:
+                file_reader = csv.reader(input_file, delimiter=';')
+                for row in file_reader:
+                    data_list.append(row)
+        return data_list
     except FileNotFoundError:
         return None
 
@@ -31,8 +32,8 @@ def load_csv_data(file_name):
 def load_input_data(csv_file_names, xlsx_file_name):
     csv_files_content = []
     for file_type in csv_file_names:
-        data = load_csv_data(csv_file_names[file_type])
-        csv_files_content.append(data)
+        csv_data = load_csv_data(csv_file_names[file_type])
+        csv_files_content.append(csv_data)
     try:
         xlsx_workbook = load_workbook(xlsx_file_name, read_only=True)
     except FileNotFoundError:
@@ -46,9 +47,13 @@ def get_bathymetry_points(point_list):
         feature_names = ['longitude', 'latitude', 'depth', 'time']
         try:
             longitude, latitude, depth, id1, id2, id3, time, start_time = point
+            # print(longitude, latitude, depth, id1, id2, id3, time, start_time)
         except ValueError:
             return None
-        depth = float(depth.replace(',', '.'))
+        try:
+            depth = float(depth.replace(',', '.'))
+        except ValueError:
+            depth = None
         feature_values = [longitude, latitude, depth, time]
         point_dict = dict(zip(feature_names, feature_values))
         bathymetry_list.append(point_dict)
@@ -87,7 +92,7 @@ def get_logger_data(xlsx_workbook):
     all_loggers_data = {}
     for sheet in xlsx_workbook:
         logger_trace = {}
-        for row in sheet.iter_rows(min_row=2, max_col=2, max_row=5):
+        for row in sheet.iter_rows(min_row=2, max_col=2):
             measurement_datetime = row[0].value
             elevation = row[1].value
             logger_trace[measurement_datetime] = elevation
@@ -98,8 +103,13 @@ def get_logger_data(xlsx_workbook):
 def convert_geocoordinates_to_utm(dataset_list):
     for dataset in dataset_list:
         for point in dataset:
-            longitude = float(point['longitude'])
-            latitude = float(point['latitude'])
+            try:
+                longitude = float(point['longitude'])
+                latitude = float(point['latitude'])
+            except ValueError:
+                point['longitude'] = None
+                point['latitude'] = None
+                continue
             utm_long, utm_lat, zone_num, zone_letter = utm.from_latlon(
                 latitude, longitude
             )
@@ -126,8 +136,11 @@ def round_logger_datetime(logger_data):
 def get_distance_to_the_fairway_point(fairway_point, lat, long):
     fairway_point_lat = fairway_point['latitude']
     fairway_point_long = fairway_point['longitude']
-    distance = hypot(fairway_point_lat - lat, fairway_point_long - long)
-    return distance
+    only_floats = fairway_point_lat and fairway_point_long and lat and long
+    if only_floats:
+        distance = hypot(fairway_point_lat - lat, fairway_point_long - long)
+        return distance
+    return inf
 
 
 def get_distance_from_sea(points, fairway_points):
@@ -180,14 +193,24 @@ def get_water_elevation(bathymetry, logger_points, logger_traces):
             measurement_point['distance_from_seashore'],
             logger_points
         )
-        measurement_time = datetime.strptime(
-            measurement_point['time'],
-            '%d.%m.%Y %H:%M'
-        )
+        try:
+            measurement_time = datetime.strptime(
+                measurement_point['time'],
+                '%d.%m.%Y %H:%M'
+            )
+        except ValueError:
+            measurement_time = datetime.strptime(
+                measurement_point['time'],
+                '%d.%m.%y %H:%M'
+            )
         lower_log_name = lower_log['logger_name']
         upper_log_name = upper_log['logger_name']
-        lower_elevation = logger_traces[lower_log_name][measurement_time]
-        upper_elevation = logger_traces[upper_log_name][measurement_time]
+        try:
+            lower_elevation = logger_traces[lower_log_name][measurement_time]
+            upper_elevation = logger_traces[upper_log_name][measurement_time]
+        except KeyError:
+            measurement_point['water_elevation'] = None
+            continue
         water_elevation = interpolate_water_surface(
             lower_elevation,
             upper_elevation,
@@ -217,7 +240,7 @@ def print_about_FileNotFoundError_and_exit(
         xlsx_filename
 ):
     if bathymetry is None:
-        exit('Can non find {}.'.format(csv_filenames['bathymetry']))
+        exit('Can not find {}.'.format(csv_filenames['bathymetry']))
     if fairway_points is None:
         exit('Can not find {}.'.format(csv_filenames['points_along_fairway']))
     if logger_points is None:
@@ -276,11 +299,11 @@ def output_result(bathymetry_info):
 
 
 if __name__ == "__main__":
-    bathymetry_file_names = get_bathymetry_file_names()
+    bathymetry_file_paths_list = get_bathymetry_file_paths()
     input_csv_filenames = OrderedDict([
-        ('bathymetry', 'bathymetry.csv'),
-        ('points_along_fairway', 'fairway_points.csv'),
-        ('logger_coordinates', 'logger_points.csv')
+        ('bathymetry', bathymetry_file_paths_list),
+        ('points_along_fairway', ['fairway_points.csv']),
+        ('logger_coordinates', ['logger_points.csv'])
     ])
     water_elevation_filename = 'logger_data.xlsx'
     csv_files_content, xlsx_file_workbook = load_input_data(
