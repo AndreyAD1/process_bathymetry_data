@@ -5,6 +5,7 @@ from openpyxl import load_workbook
 from collections import OrderedDict
 from datetime import datetime, timedelta
 import os
+from itertools import tee
 
 
 def get_bathymetry_file_paths():
@@ -20,12 +21,7 @@ def load_csv_data(file_name_list):
     data_list = []
     try:
         for file_path in file_name_list:
-            with open(
-                    file_path,
-                    'r',
-                    newline='',
-                    encoding='utf-8'
-            ) as input_file:
+            with open(file_path, 'r', encoding='utf-8') as input_file:
                 file_reader = csv.reader(input_file, delimiter=';')
                 for row in file_reader:
                     row.append(file_path)
@@ -38,8 +34,9 @@ def load_csv_data(file_name_list):
 def load_input_data(csv_file_names, xlsx_file_name):
     csv_files_content = []
     for file_type in csv_file_names:
-        csv_data = load_csv_data(csv_file_names[file_type])
-        csv_files_content.append(csv_data)
+        filename_list = csv_file_names[file_type]
+        data_of_single_input_type = load_csv_data(filename_list)
+        csv_files_content.append(data_of_single_input_type)
     try:
         xlsx_workbook = load_workbook(xlsx_file_name, read_only=True)
     except FileNotFoundError:
@@ -115,19 +112,20 @@ def get_logger_data(xlsx_workbook):
     return all_loggers_data
 
 
-def convert_geocoordinates_to_utm(dataset_dict):
-    point_before_warning = None
-    warning_dataset = None
-    for dataset_name in dataset_dict:
-        correct_point = (
-            'Warning in first point of this dataset: {}'.format(dataset_name)
-        )
-        for point in dataset_dict[dataset_name]:
-            if (point['longitude'] is None) or (point['latitude'] is None):
-                point_before_warning = correct_point
-                warning_dataset = dataset_name
+def get_invalid_input_points(dataset_list):
+    invalid_point_list = []
+    for dataset in dataset_list:
+        for point in dataset:
+            if not all(point.values()):
+                invalid_point_list.append(point)
+    return invalid_point_list
+
+
+def convert_geocoordinates_to_utm(dataset_list):
+    for dataset in dataset_list:
+        for point in dataset:
+            if not all(point.values()):
                 continue
-            correct_point = point
             longitude = float(point['longitude'])
             latitude = float(point['latitude'])
             utm_long, utm_lat, zone_num, zone_letter = utm.from_latlon(
@@ -135,7 +133,7 @@ def convert_geocoordinates_to_utm(dataset_dict):
             )
             point['longitude'] = utm_long
             point['latitude'] = utm_lat
-    return dataset_dict, (point_before_warning, warning_dataset)
+    return dataset_list
 
 
 def round_logger_datetime(logger_data):
@@ -144,7 +142,7 @@ def round_logger_datetime(logger_data):
         rounded_logger_data = {}
         for measurement_datetime, water_elevation in logger_trace.items():
             measurement_datetime += timedelta(seconds=30)
-            rounded_datetime = measurement_datetime-timedelta(
+            rounded_datetime = measurement_datetime - timedelta(
                 seconds=measurement_datetime.second,
                 microseconds=measurement_datetime.microsecond
             )
@@ -165,6 +163,9 @@ def get_distance_to_the_fairway_point(fairway_point, lat, long):
 
 def get_distance_from_sea(points, fairway_points):
     for point in points:
+        if not all(point.values()):
+            point['distance_from_seashore'] = None
+            continue
         latitude = point['latitude']
         longitude = point['longitude']
         closest_fairway_point = min(
@@ -182,16 +183,18 @@ def get_distance_from_sea(points, fairway_points):
 
 def get_nearest_loggers(distance_from_seashore, logger_list):
     logger_list.sort(key=lambda x: x['distance_from_seashore'])
-    previous_logger = logger_list[0]
-    for logger in logger_list:
-        lower_logger = logger
-        upper_logger = logger
-        logger_distance = logger['distance_from_seashore']
-        if logger_distance >= distance_from_seashore:
-            lower_logger = previous_logger
+    logger_iterator, logger_iterator_duplicate = tee(logger_list)
+    next(logger_iterator_duplicate)
+    pairwise_logger_list = zip(logger_iterator, logger_iterator_duplicate)
+    for lower_logger, upper_logger in pairwise_logger_list:
+        low_log_distance = lower_logger['distance_from_seashore']
+        up_log_distance = upper_logger['distance_from_seashore']
+        if distance_from_seashore < low_log_distance:
             return lower_logger, upper_logger
-        previous_logger = logger
-    return lower_logger, upper_logger
+        if low_log_distance <= distance_from_seashore < up_log_distance:
+            return lower_logger, upper_logger
+    uppermost_loggers_pair = (logger_list[-2], logger_list[-1])
+    return uppermost_loggers_pair
 
 
 def interpolate_water_surface(
@@ -209,10 +212,15 @@ def interpolate_water_surface(
 
 def get_water_elevation(bathymetry, logger_points, logger_traces):
     for measurement_point in bathymetry:
+        if not all(measurement_point.values()):
+            measurement_point['water_elevation'] = None
+            continue
+
         lower_log, upper_log = get_nearest_loggers(
             measurement_point['distance_from_seashore'],
             logger_points
         )
+
         try:
             measurement_time = datetime.strptime(
                 measurement_point['time'],
@@ -244,6 +252,9 @@ def get_water_elevation(bathymetry, logger_points, logger_traces):
 
 def get_bottom_elevation(bathymetry):
     for point in bathymetry:
+        if not all(point.values()):
+            point['bottom_elevation'] = None
+            continue
         water_elevation = point['water_elevation']
         depth = point['depth']
         bottom_elevation = water_elevation - depth
@@ -305,7 +316,8 @@ def output_result(bathymetry_info):
         'time',
         'water_elevation',
         'depth',
-        'distance_from_seashore'
+        'distance_from_seashore',
+        'filepath'
     ]
     with open('output.csv', 'w', newline='', encoding='utf-8') as output_file:
         writer = csv.DictWriter(
@@ -320,6 +332,8 @@ def output_result(bathymetry_info):
 
 if __name__ == "__main__":
     bathymetry_file_paths_list = get_bathymetry_file_paths()
+    # use OrderedDict() instance to correctly extract data
+    # from output of load_input_data()
     input_csv_filenames = OrderedDict([
         ('bathymetry', bathymetry_file_paths_list),
         ('points_along_fairway', ['fairway_points.csv']),
@@ -349,27 +363,13 @@ if __name__ == "__main__":
         logger_points,
         input_csv_filenames,
     )
-    datasets = {
-        'bathymetry': bathymetry_points,
-        'fairway_points': fairway_points,
-        'logger_points': logger_points
-    }
-    utm_data, coordinates_warning = convert_geocoordinates_to_utm(datasets)
+    datasets = [bathymetry_points, fairway_points, logger_points]
+    invalid_points = get_invalid_input_points(datasets)
 
-    utm_bathymetry = utm_data['bathymetry']
-    utm_fairway = utm_data['fairway_points']
-    utm_loggers = utm_data['logger_points']
-    warning_point, dataset_with_warning = coordinates_warning
-    if warning_point:
-        print(
-            'WARNING. Invalid coordinates in some point(s).\n',
-            'The correct point just before invalid point is {}\n'.format(
-                warning_point
-            ),
-            'The dataset which contains invalid point is "{}".\n'.format(
-                dataset_with_warning
-            )
-        )
+    utm_bathymetry, utm_fairway, utm_loggers = convert_geocoordinates_to_utm(
+        datasets
+    )
+
     bathymetry_points = get_distance_from_sea(utm_bathymetry, utm_fairway)
     logger_points = get_distance_from_sea(utm_loggers, utm_fairway)
     water_elevation_data = round_logger_datetime(water_elevation_data)
@@ -381,7 +381,5 @@ if __name__ == "__main__":
     bathymetry_points_with_bottom_elevation = get_bottom_elevation(
         bathymetry_points
     )
-
-    # output = prepare_output(bathymetry_points_with_bottom_elevation)
 
     output_result(bathymetry_points_with_bottom_elevation)
