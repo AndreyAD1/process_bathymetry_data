@@ -181,6 +181,7 @@ def get_distance_from_sea(points, fairway_points):
     return points
 
 
+# TODO Get only nearest loggers which was working at the measurement time.
 def get_nearest_loggers(distance_from_seashore, logger_list):
     logger_list.sort(key=lambda x: x['distance_from_seashore'])
     logger_iterator, logger_iterator_duplicate = tee(logger_list)
@@ -220,7 +221,8 @@ def get_water_elevation(bathymetry, logger_points, logger_traces):
             measurement_point['distance_from_seashore'],
             logger_points
         )
-
+        # TODO Delete this exception.
+        # TODO 'Regular expressions' library seems to be useful for this case.
         try:
             measurement_time = datetime.strptime(
                 measurement_point['time'],
@@ -237,6 +239,7 @@ def get_water_elevation(bathymetry, logger_points, logger_traces):
             lower_elevation = logger_traces[lower_log_name][measurement_time]
             upper_elevation = logger_traces[upper_log_name][measurement_time]
         except KeyError:
+            # TODO report about this exception
             measurement_point['water_elevation'] = None
             continue
         water_elevation = interpolate_water_surface(
@@ -364,6 +367,7 @@ if __name__ == "__main__":
         input_csv_filenames,
     )
     datasets = [bathymetry_points, fairway_points, logger_points]
+    # TODO Test cases of wrong input.
     invalid_points = get_invalid_input_points(datasets)
 
     utm_bathymetry, utm_fairway, utm_loggers = convert_geocoordinates_to_utm(
