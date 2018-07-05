@@ -184,7 +184,6 @@ def get_distance_from_sea(points, points_along_fairway):
     return points
 
 
-# TODO Get only nearest loggers which was working at the measurement time.
 def get_nearest_loggers(distance_from_seashore, logger_list):
     logger_list.sort(key=lambda x: x['distance_from_seashore'])
     logger_iterator, logger_iterator_duplicate = tee(logger_list)
@@ -214,29 +213,44 @@ def interpolate_water_surface(
     return water_elevation
 
 
+def get_loggers_working_at_measurement_time(
+        logger_points,
+        logger_data,
+        measurement_datetime
+):
+    not_working_logger_names = []
+    for logger_name in logger_data:
+        if measurement_datetime not in logger_data[logger_name]:
+            not_working_logger_names.append(logger_name)
+    for logger_point in logger_points:
+        if logger_point['logger_name'] in not_working_logger_names:
+            logger_points.remove(logger_point)
+    return logger_points
+
+
 def get_water_elevation(bathymetry, logger_data_points, logger_traces):
     for measurement_point in bathymetry:
         if not all(measurement_point.values()):
             measurement_point['water_elevation'] = None
             continue
-
-        lower_log, upper_log = get_nearest_loggers(
-            measurement_point['distance_from_seashore'],
-            logger_data_points
-        )
         measurement_time = parse(
             measurement_point['time'],
             dayfirst=True,
             yearfirst=False
         )
+        working_loggers = get_loggers_working_at_measurement_time(
+            logger_data_points,
+            logger_traces,
+            measurement_time
+        )
+        lower_log, upper_log = get_nearest_loggers(
+            measurement_point['distance_from_seashore'],
+            working_loggers
+        )
         lower_log_name = lower_log['logger_name']
         upper_log_name = upper_log['logger_name']
-        try:
-            lower_elevation = logger_traces[lower_log_name][measurement_time]
-            upper_elevation = logger_traces[upper_log_name][measurement_time]
-        except KeyError:
-            measurement_point['water_elevation'] = None
-            continue
+        lower_elevation = logger_traces[lower_log_name][measurement_time]
+        upper_elevation = logger_traces[upper_log_name][measurement_time]
         water_elevation = interpolate_water_surface(
             lower_elevation,
             upper_elevation,
