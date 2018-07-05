@@ -32,16 +32,16 @@ def load_csv_data(file_name_list):
 
 
 def load_input_data(csv_file_names, xlsx_file_name):
-    csv_files_content = []
+    csv_content = []
     for file_type in csv_file_names:
         filename_list = csv_file_names[file_type]
         data_of_single_input_type = load_csv_data(filename_list)
-        csv_files_content.append(data_of_single_input_type)
+        csv_content.append(data_of_single_input_type)
     try:
         xlsx_workbook = load_workbook(xlsx_file_name, read_only=True)
     except FileNotFoundError:
         xlsx_workbook = None
-    return csv_files_content, xlsx_workbook
+    return csv_content, xlsx_workbook
 
 
 def get_bathymetry_points(point_list):
@@ -77,7 +77,7 @@ def get_fairway_points(point_list):
             'file_name'
         ]
         try:
-            longitude, latitude, id, distance, file_name = point
+            longitude, latitude, _, distance, file_name = point
         except ValueError:
             return None
         feature_values = [longitude, latitude, distance, file_name]
@@ -125,6 +125,8 @@ def convert_geocoordinates_to_utm(dataset_list):
     for dataset in dataset_list:
         for point in dataset:
             if not all(point.values()):
+                point['longitude'] = None
+                point['latitude'] = None
                 continue
             longitude = float(point['longitude'])
             latitude = float(point['latitude'])
@@ -161,7 +163,7 @@ def get_distance_to_the_fairway_point(fairway_point, lat, long):
     return inf
 
 
-def get_distance_from_sea(points, fairway_points):
+def get_distance_from_sea(points, points_along_fairway):
     for point in points:
         if not all(point.values()):
             point['distance_from_seashore'] = None
@@ -169,7 +171,7 @@ def get_distance_from_sea(points, fairway_points):
         latitude = point['latitude']
         longitude = point['longitude']
         closest_fairway_point = min(
-            fairway_points,
+            points_along_fairway,
             key=lambda x: get_distance_to_the_fairway_point(
                 x,
                 latitude,
@@ -211,7 +213,7 @@ def interpolate_water_surface(
     return water_elevation
 
 
-def get_water_elevation(bathymetry, logger_points, logger_traces):
+def get_water_elevation(bathymetry, logger_data_points, logger_traces):
     for measurement_point in bathymetry:
         if not all(measurement_point.values()):
             measurement_point['water_elevation'] = None
@@ -219,7 +221,7 @@ def get_water_elevation(bathymetry, logger_points, logger_traces):
 
         lower_log, upper_log = get_nearest_loggers(
             measurement_point['distance_from_seashore'],
-            logger_points
+            logger_data_points
         )
         # TODO Delete this exception.
         # TODO 'Regular expressions' library seems to be useful for this case.
@@ -229,17 +231,21 @@ def get_water_elevation(bathymetry, logger_points, logger_traces):
                 '%d.%m.%Y %H:%M'
             )
         except ValueError:
-            measurement_time = datetime.strptime(
-                measurement_point['time'],
-                '%d.%m.%y %H:%M'
-            )
+            try:
+                measurement_time = datetime.strptime(
+                    measurement_point['time'],
+                    '%d.%m.%y %H:%M'
+                )
+            except ValueError:
+                measurement_point['water_elevation'] = None
         lower_log_name = lower_log['logger_name']
         upper_log_name = upper_log['logger_name']
         try:
             lower_elevation = logger_traces[lower_log_name][measurement_time]
             upper_elevation = logger_traces[upper_log_name][measurement_time]
         except KeyError:
-            # TODO report about this exception
+            # TODO report about this exception:
+            # TODO "Nearest loggers have no data for the point X"
             measurement_point['water_elevation'] = None
             continue
         water_elevation = interpolate_water_surface(
@@ -265,19 +271,19 @@ def get_bottom_elevation(bathymetry):
     return bathymetry
 
 
-def print_about_FileNotFoundError_and_exit(
+def print_about_filenotfounderror_and_exit(
         bathymetry,
-        fairway_points,
-        logger_points,
+        points_along_fairway,
+        logger_data_points,
         water_elevation_info,
         csv_filenames,
         xlsx_filename
 ):
     if bathymetry is None:
         exit('Can not find {}.'.format(csv_filenames['bathymetry']))
-    if fairway_points is None:
+    if points_along_fairway is None:
         exit('Can not find {}.'.format(csv_filenames['points_along_fairway']))
-    if logger_points is None:
+    if logger_data_points is None:
         exit('Can not find {}.'.format(csv_filenames['logger_coordinates']))
     if water_elevation_info is None:
         exit('Can not find {}.'.format(xlsx_filename))
@@ -308,6 +314,13 @@ def print_about_wrong_file_format_and_exit(
                 csv_filenames['logger_coordinates']
             )
         )
+    return
+
+
+def print_invalid_points(points):
+    for point in points:
+        if not all(point.values()):
+            print('WARNING! Invalid point: {}'.format(point))
     return
 
 
@@ -348,7 +361,7 @@ if __name__ == "__main__":
         water_elevation_filename
     )
     bathymetry_data, fairway_data, loggers = csv_files_content
-    print_about_FileNotFoundError_and_exit(
+    print_about_filenotfounderror_and_exit(
         bathymetry_data,
         fairway_data,
         loggers,
@@ -367,7 +380,6 @@ if __name__ == "__main__":
         input_csv_filenames,
     )
     datasets = [bathymetry_points, fairway_points, logger_points]
-    # TODO Test cases of wrong input.
     invalid_points = get_invalid_input_points(datasets)
 
     utm_bathymetry, utm_fairway, utm_loggers = convert_geocoordinates_to_utm(
@@ -385,5 +397,5 @@ if __name__ == "__main__":
     bathymetry_points_with_bottom_elevation = get_bottom_elevation(
         bathymetry_points
     )
-
+    print_invalid_points(bathymetry_points_with_bottom_elevation)
     output_result(bathymetry_points_with_bottom_elevation)
