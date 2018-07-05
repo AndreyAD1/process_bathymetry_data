@@ -3,18 +3,19 @@ from math import hypot, inf
 import utm
 from openpyxl import load_workbook
 from collections import OrderedDict
-from datetime import datetime, timedelta
+from datetime import timedelta
 import os
 from itertools import tee
+from dateutil.parser import parse
 
 
 def get_bathymetry_file_paths():
-    filenames_list = []
+    filename_list = []
     for entry in os.scandir('bathymetry_data/'):
         file_root, file_extension = os.path.splitext(entry.path)
         if file_extension == '.csv':
-            filenames_list.append(entry.path)
-    return filenames_list
+            filename_list.append(entry.path)
+    return filename_list
 
 
 def load_csv_data(file_name_list):
@@ -223,29 +224,17 @@ def get_water_elevation(bathymetry, logger_data_points, logger_traces):
             measurement_point['distance_from_seashore'],
             logger_data_points
         )
-        # TODO Delete this exception.
-        # TODO 'Regular expressions' library seems to be useful for this case.
-        try:
-            measurement_time = datetime.strptime(
-                measurement_point['time'],
-                '%d.%m.%Y %H:%M'
-            )
-        except ValueError:
-            try:
-                measurement_time = datetime.strptime(
-                    measurement_point['time'],
-                    '%d.%m.%y %H:%M'
-                )
-            except ValueError:
-                measurement_point['water_elevation'] = None
+        measurement_time = parse(
+            measurement_point['time'],
+            dayfirst=True,
+            yearfirst=False
+        )
         lower_log_name = lower_log['logger_name']
         upper_log_name = upper_log['logger_name']
         try:
             lower_elevation = logger_traces[lower_log_name][measurement_time]
             upper_elevation = logger_traces[upper_log_name][measurement_time]
         except KeyError:
-            # TODO report about this exception:
-            # TODO "Nearest loggers have no data for the point X"
             measurement_point['water_elevation'] = None
             continue
         water_elevation = interpolate_water_surface(
@@ -348,6 +337,7 @@ def output_result(bathymetry_info):
 
 if __name__ == "__main__":
     bathymetry_file_paths_list = get_bathymetry_file_paths()
+    # bathymetry_file_paths_list = ['bathymetry_data/Sonar0018_out_t.csv']
     # use OrderedDict() instance to correctly extract data
     # from output of load_input_data()
     input_csv_filenames = OrderedDict([
