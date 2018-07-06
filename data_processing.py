@@ -214,7 +214,7 @@ def interpolate_water_surface(
 
 
 def get_loggers_working_at_measurement_time(
-        logger_points,
+        list_of_logger_points,
         logger_data,
         measurement_datetime
 ):
@@ -222,10 +222,10 @@ def get_loggers_working_at_measurement_time(
     for logger_name in logger_data:
         if measurement_datetime not in logger_data[logger_name]:
             not_working_logger_names.append(logger_name)
-    for logger_point in logger_points:
+    for logger_point in list_of_logger_points:
         if logger_point['logger_name'] in not_working_logger_names:
-            logger_points.remove(logger_point)
-    return logger_points
+            list_of_logger_points.remove(logger_point)
+    return list_of_logger_points, not_working_logger_names
 
 
 def get_water_elevation(bathymetry, logger_data_points, logger_traces):
@@ -238,7 +238,7 @@ def get_water_elevation(bathymetry, logger_data_points, logger_traces):
             dayfirst=True,
             yearfirst=False
         )
-        working_loggers = get_loggers_working_at_measurement_time(
+        working_loggers, turned_off_loggers = get_loggers_working_at_measurement_time(
             logger_data_points,
             logger_traces,
             measurement_time
@@ -259,7 +259,7 @@ def get_water_elevation(bathymetry, logger_data_points, logger_traces):
             measurement_point['distance_from_seashore']
         )
         measurement_point['water_elevation'] = water_elevation
-    return bathymetry
+    return bathymetry, turned_off_loggers
 
 
 def get_bottom_elevation(bathymetry):
@@ -351,7 +351,6 @@ def output_result(bathymetry_info):
 
 if __name__ == "__main__":
     bathymetry_file_paths_list = get_bathymetry_file_paths()
-    # bathymetry_file_paths_list = ['bathymetry_data/Sonar0018_out_t.csv']
     # use OrderedDict() instance to correctly extract data
     # from output of load_input_data()
     input_csv_filenames = OrderedDict([
@@ -393,11 +392,16 @@ if __name__ == "__main__":
     bathymetry_points = get_distance_from_sea(utm_bathymetry, utm_fairway)
     logger_points = get_distance_from_sea(utm_loggers, utm_fairway)
     water_elevation_data = round_logger_datetime(water_elevation_data)
-    bathymetry_points = get_water_elevation(
+    bathymetry_points, switched_off_loggers = get_water_elevation(
         bathymetry_points,
         logger_points,
         water_elevation_data
     )
+    if switched_off_loggers:
+        print(
+            'WARNING! These loggers have no data for some '
+            'measurement time moments: {}'.format(switched_off_loggers)
+        )
     bathymetry_points_with_bottom_elevation = get_bottom_elevation(
         bathymetry_points
     )
