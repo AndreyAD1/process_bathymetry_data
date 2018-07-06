@@ -1,13 +1,13 @@
+import argparse
+import os
 import csv
-from math import hypot, inf
 import utm
+from math import hypot, inf
 from openpyxl import load_workbook
 from collections import OrderedDict
 from datetime import timedelta
-import os
 from itertools import tee
 from dateutil.parser import parse
-import argparse
 
 
 def get_console_arguments():
@@ -163,7 +163,8 @@ def get_invalid_input_points(dataset_list):
 
 
 def convert_geocoordinates_to_utm(dataset_list):
-    for dataset in dataset_list:
+    dataset_with_coordinates = dataset_list
+    for dataset in dataset_with_coordinates:
         for point in dataset:
             if not all(point.values()):
                 point['longitude'] = None
@@ -176,10 +177,11 @@ def convert_geocoordinates_to_utm(dataset_list):
             )
             point['longitude'] = utm_long
             point['latitude'] = utm_lat
-    return dataset_list
+    return dataset_with_coordinates
 
 
 def round_logger_datetime(logger_data):
+    data_with_rounded_time = logger_data
     for logger in logger_data:
         logger_trace = logger_data[logger]
         rounded_logger_data = {}
@@ -190,8 +192,8 @@ def round_logger_datetime(logger_data):
                 microseconds=measurement_datetime.microsecond
             )
             rounded_logger_data[rounded_datetime] = water_elevation
-        logger_data[logger] = rounded_logger_data
-    return logger_data
+        data_with_rounded_time[logger] = rounded_logger_data
+    return data_with_rounded_time
 
 
 def get_distance_to_the_fairway_point(fairway_point, lat, long):
@@ -205,7 +207,8 @@ def get_distance_to_the_fairway_point(fairway_point, lat, long):
 
 
 def get_distance_from_sea(points, points_along_fairway):
-    for point in points:
+    points_with_distance_from_sea = points
+    for point in points_with_distance_from_sea:
         if not all(point.values()):
             point['distance_from_seashore'] = None
             continue
@@ -221,7 +224,7 @@ def get_distance_from_sea(points, points_along_fairway):
         )
         distance_from_sea = closest_fairway_point['distance_from_seashore']
         point['distance_from_seashore'] = float(distance_from_sea)
-    return points
+    return points_with_distance_from_sea
 
 
 def get_nearest_loggers(distance_from_seashore, logger_list):
@@ -259,18 +262,20 @@ def get_loggers_working_at_measurement_time(
         measurement_datetime
 ):
     not_working_logger_names = []
+    list_of_working_loggers = list_of_logger_points
     for logger_name in logger_data:
         if measurement_datetime not in logger_data[logger_name]:
             not_working_logger_names.append(logger_name)
-    for logger_point in list_of_logger_points:
+    for logger_point in list_of_working_loggers:
         if logger_point['logger_name'] in not_working_logger_names:
-            list_of_logger_points.remove(logger_point)
-    return list_of_logger_points, not_working_logger_names
+            list_of_working_loggers.remove(logger_point)
+    return list_of_working_loggers, not_working_logger_names
 
 
 def get_water_elevation(bathymetry, logger_data_points, logger_traces):
-    turned_off_loggers = []
-    for measurement_point in bathymetry:
+    disabled_logs = []
+    bathymetry_points = bathymetry
+    for measurement_point in bathymetry_points:
         if not all(measurement_point.values()):
             measurement_point['water_elevation'] = None
             continue
@@ -279,14 +284,14 @@ def get_water_elevation(bathymetry, logger_data_points, logger_traces):
             dayfirst=True,
             yearfirst=False
         )
-        working_loggers, turned_off_loggers = get_loggers_working_at_measurement_time(
+        working_logs, disabled_logs = get_loggers_working_at_measurement_time(
             logger_data_points,
             logger_traces,
             measurement_time
         )
         lower_log, upper_log = get_nearest_loggers(
             measurement_point['distance_from_seashore'],
-            working_loggers
+            working_logs
         )
         lower_log_name = lower_log['logger_name']
         upper_log_name = upper_log['logger_name']
@@ -300,11 +305,12 @@ def get_water_elevation(bathymetry, logger_data_points, logger_traces):
             measurement_point['distance_from_seashore']
         )
         measurement_point['water_elevation'] = water_elevation
-    return bathymetry, turned_off_loggers
+    return bathymetry_points, disabled_logs
 
 
 def get_bottom_elevation(bathymetry):
-    for point in bathymetry:
+    bathymetry_with_bottom_elevation = bathymetry
+    for point in bathymetry_with_bottom_elevation:
         if not all(point.values()):
             point['bottom_elevation'] = None
             continue
@@ -312,7 +318,7 @@ def get_bottom_elevation(bathymetry):
         depth = point['depth']
         bottom_elevation = water_elevation - depth
         point['bottom_elevation'] = bottom_elevation
-    return bathymetry
+    return bathymetry_with_bottom_elevation
 
 
 def print_about_filenotfounderror_and_exit(
