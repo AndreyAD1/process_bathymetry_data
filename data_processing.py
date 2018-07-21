@@ -8,6 +8,7 @@ from collections import OrderedDict
 from datetime import timedelta
 from itertools import tee
 from dateutil.parser import parse
+from copy import deepcopy
 
 
 def get_console_arguments():
@@ -42,7 +43,7 @@ def get_console_arguments():
     argument_parser.add_argument(
         '-o',
         '--output_filepath',
-        default='output_path',
+        default='output.csv',
         help='Enter path of *.csv file containing the script`s output.'
     )
     arguments = argument_parser.parse_args()
@@ -163,7 +164,7 @@ def get_invalid_input_points(dataset_list):
 
 
 def convert_geocoordinates_to_utm(dataset_list):
-    dataset_with_coordinates = dataset_list
+    dataset_with_coordinates = deepcopy(dataset_list)
     for dataset in dataset_with_coordinates:
         for point in dataset:
             if not all(point.values()):
@@ -181,7 +182,7 @@ def convert_geocoordinates_to_utm(dataset_list):
 
 
 def round_logger_datetime(logger_data):
-    data_with_rounded_time = logger_data
+    data_with_rounded_time = deepcopy(logger_data)
     for logger in logger_data:
         logger_trace = logger_data[logger]
         rounded_logger_data = {}
@@ -207,7 +208,7 @@ def get_distance_to_the_fairway_point(fairway_point, lat, long):
 
 
 def get_distance_from_sea(points, points_along_fairway):
-    points_with_distance_from_sea = points
+    points_with_distance_from_sea = deepcopy(points)
     for point in points_with_distance_from_sea:
         if not all(point.values()):
             point['distance_from_seashore'] = None
@@ -232,6 +233,7 @@ def get_nearest_loggers(distance_from_seashore, logger_list):
     logger_iterator, logger_iterator_duplicate = tee(logger_list)
     next(logger_iterator_duplicate)
     pairwise_logger_list = zip(logger_iterator, logger_iterator_duplicate)
+
     for lower_logger, upper_logger in pairwise_logger_list:
         low_log_distance = lower_logger['distance_from_seashore']
         up_log_distance = upper_logger['distance_from_seashore']
@@ -239,8 +241,13 @@ def get_nearest_loggers(distance_from_seashore, logger_list):
             return lower_logger, upper_logger
         if low_log_distance <= distance_from_seashore < up_log_distance:
             return lower_logger, upper_logger
-    uppermost_loggers_pair = (logger_list[-2], logger_list[-1])
-    return uppermost_loggers_pair
+
+    # TODO clarify the code.
+    # lower_logger, upper_logger =
+    uppermost_loggers = (logger_list[-2], logger_list[-1])
+    # uppermost_loggers = (lower_logger, upper_logger)
+    # # print(uppermost_loggers)
+    return uppermost_loggers
 
 
 def interpolate_water_surface(
@@ -262,7 +269,7 @@ def get_loggers_working_at_measurement_time(
         measurement_datetime
 ):
     not_working_logger_names = []
-    list_of_working_loggers = list_of_logger_points
+    list_of_working_loggers = deepcopy(list_of_logger_points)
     for logger_name in logger_data:
         if measurement_datetime not in logger_data[logger_name]:
             not_working_logger_names.append(logger_name)
@@ -274,7 +281,7 @@ def get_loggers_working_at_measurement_time(
 
 def get_water_elevation(bathymetry, logger_data_points, logger_traces):
     disabled_logs = []
-    bathymetry_points = bathymetry
+    bathymetry_points = deepcopy(bathymetry)
     for measurement_point in bathymetry_points:
         if not all(measurement_point.values()):
             measurement_point['water_elevation'] = None
@@ -309,7 +316,7 @@ def get_water_elevation(bathymetry, logger_data_points, logger_traces):
 
 
 def get_bottom_elevation(bathymetry):
-    bathymetry_with_bottom_elevation = bathymetry
+    bathymetry_with_bottom_elevation = deepcopy(bathymetry)
     for point in bathymetry_with_bottom_elevation:
         if not all(point.values()):
             point['bottom_elevation'] = None
