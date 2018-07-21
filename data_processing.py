@@ -242,11 +242,7 @@ def get_nearest_loggers(distance_from_seashore, logger_list):
         if low_log_distance <= distance_from_seashore < up_log_distance:
             return lower_logger, upper_logger
 
-    # TODO clarify the code.
-    # lower_logger, upper_logger =
-    uppermost_loggers = (logger_list[-2], logger_list[-1])
-    # uppermost_loggers = (lower_logger, upper_logger)
-    # # print(uppermost_loggers)
+    uppermost_loggers = (lower_logger, upper_logger)
     return uppermost_loggers
 
 
