@@ -1,6 +1,6 @@
 # Bathymetry data processing
 This script gets sonar data and water elevation data and returns
-`*.csv` file with coordinates and bottom elevation.
+`*.csv` file with bottom elevation and coordinates.
 
 Generally, this script gets water depths and water elevations, 
 interpolates them spatially and temporally and converts every measured water depth
@@ -22,7 +22,7 @@ elevation.
  
 ## How to Install
 Python v3.5 should be already installed. Moreover, you should use `pip` to install 
-third-party Python modules which this script uses (dependencies).
+third-party Python modules (dependencies) which this script uses.
 The console command to install dependencies:
 ```bash
 pip install -r requirements.txt # alternatively try pip3
@@ -46,6 +46,11 @@ $ python3 data_processing.py
 ```
 
 Windows usage is the same.
+
+Having completed calculations the script creates the file `output.csv`
+containing bottom elevations and its coordinates.
+
+User can specify paths and names of all input and output files (see **Script Parameters**).
 
 # Detailed Description
 
