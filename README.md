@@ -13,7 +13,7 @@ estuary.
 Surveying river estuary we deployed several loggers measuring water elevation
 along estuary. While loggers were working, we provided bathymetry observations
 using sonar. Finally, we got sonar data (points with coordinates, depth and measurement time)
-and logger data (temporal variation of water elevation along river esuary). 
+and logger data (temporal variation of water elevation along river estuary). 
 
 We decided to make this program to convert automatically every observed depth into a bottom 
 elevation.
@@ -32,13 +32,13 @@ It is recommended to use virtual environment for better isolation.
 ## Quick Start
 
 1. Download the file `data_processing.py` from this repository.
-2. Put in the script`s directory these files (see file formats in **Input File Formats**):
+2. Put these files in the script`s directory (see file formats in **Input File Formats**):
     1. `fairway_points.csv` - file with coordinates of points located along 
     river fairway; 
     2. `logger_points.csv` - file with loggers` coordinates;
     3. `logger_data.xlsx` - file with time series of water elevation;
-3. Create in the script\`s directory folder `bathymetry/`;
-4. Put in folder `bathymetry/` `*.csv` files containing bathymetry data.
+3. Create folder `bathymetry/` in the script\`s directory ;
+4. Put files containing bathymetry data in the folder `bathymetry/` `*.csv` .
 
 To run script on Linux enter the command:
 ```bash
@@ -51,7 +51,7 @@ Windows usage is the same.
 
 ## Input File Formats
 
-Developed to solve the specific task the script requires very specific and 
+Developed to solve the specific task this script requires very specific and 
 even strange formats of input files.
 
 ### Fairway Coordinates
@@ -66,6 +66,8 @@ by semicolons:
 
 Coordinates are in decimal geographical format: DD.DDD.
 
+Example: `37.9876550297;63.9347729125;1;25`
+
 ### Loggers` coordinates
 
 This `*.csv` file contains information about logger locations. 
@@ -76,6 +78,8 @@ Each file line contains three values:
 
 Coordinates are in decimal geographical format: DD.DDD. 
 Logger names coincide with sheet names in `*.xlsx` logger data file.
+
+Example: `38.0392161806;63.9261588182;first_logger`
 
 ### Logger Data
 
@@ -107,8 +111,14 @@ Each file line contains seven values:
 Coordinates are in decimal geographical format: DD.DDD.
 The first datetime value is a day.
 
+Example: `38.28673531901094;63.82725462860046;2,5;107;0;0:00;08.08.2017 10:50;`
+
 ## Script Parameters
 
+This item is in progress.
+
 ## Output File Format
+
+This item is in progress.
  
 
