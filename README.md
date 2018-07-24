@@ -66,17 +66,17 @@ fairway line of an estuary. Each file line contains four values separated
 by semicolons:
 - longitude, 
 - latitude, 
-- useless value, 
+- ignored value, 
 - distance from a seashore (metres).
 
 Coordinates are in decimal geographical format: DD.DDD.
 
-Example: `37.9876550297;63.9347729125;1;25`
+Example row: `37.9876550297;63.9347729125;1;25`
 
 ### Loggers` coordinates
 
 This `*.csv` file contains information about logger locations. 
-Each file line contains three values: 
+Each file line contains three values separated by semicolons: 
 - longitude, 
 - latitude,
 - logger name.
@@ -84,7 +84,7 @@ Each file line contains three values:
 Coordinates are in decimal geographical format: DD.DDD. 
 Logger names coincide with sheet names in `*.xlsx` logger data file.
 
-Example: `38.0392161806;63.9261588182;first_logger`
+Example row: `38.0392161806;63.9261588182;first_logger`
 
 ### Logger Data
 
@@ -104,26 +104,49 @@ Each sheet contains water elevation time series:
 
 By default `*.csv` files containing bathymetry data are located in 
 the folder `/bathymetry_data`.
-Each file line contains seven values:
+Each file line contains seven values separated by semicolons:
 - longitude, 
 - latitude,
 - depth (metres),
-- useless value,
-- useless value, 
-- useless value, 
+- ignored value,
+- ignored value, 
+- ignored value, 
 - measurement datetime.
 
 Coordinates are in decimal geographical format: DD.DDD.
-The first datetime value is a day.
+The first value in a datetime is a day.
 
-Example: `38.28673531901094;63.82725462860046;2,5;107;0;0:00;08.08.2017 10:50;`
+Example row: `38.28673531901094;63.82725462860046;2,5;107;0;0:00;08.08.2017 10:50;`
 
 ## Script Parameters
 
-This item is in progress.
+The script has five optional parameters: 
+1. `-b`, `--bathymetry_directory` - path of directory containing `*.csv` 
+files with sonar data. By default: `bathymetry_data/`;
+2. `-f`, `--fairway_points_filepath` - path of `*.csv` file containing coordinates 
+of points located along river fairway. By default: `fairway_points.csv`;
+3. `-l`, `--logger_points_filepath` - path of `*.csv` file containing 
+loggers\` coordinates. By default: `logger_points.csv`;
+4. `-x`, `--logger_data_filepath` - path of `*.xlsx` file containing 
+time series of water elevation. By default: `logger_data.xlsx`;
+5. `-o`, `--output_filepath` - path of output `*.csv` file.
+By default: `output.csv`.
 
 ## Output File Format
 
-This item is in progress.
+The script outputs result in a `*.csv` file.
+Each file line contains eight values separated by semicolons:
+- longitude,
+- latitude,
+- bottom elevation,
+- measurement time,
+- water elevation,
+- depth,
+- distance from a seashore,
+- path of bathymetry file containing this measurement point.
+
+Example row: `451190.7763006002;7090276.6680453;-4.604013707537601;07.08.17 21:58;1.0959862924623989;5.7;625.0;bathymetry_data/Sonar0161_out_t.csv`
+
+
  
 
