@@ -75,7 +75,7 @@ User can specify paths and names of all input and output files (see [Script Para
 Developed to solve the specific task this script requires very specific and 
 even strange formats of input files.
 
-### Fairway Coordinates <a name='fairway_coordinates></a>
+### Fairway Coordinates <a name='fairway_coordinates'></a>
 
 This `*.csv` file contains information about points located along
 fairway line of an estuary. Each file line contains four values separated 
@@ -87,7 +87,8 @@ by semicolons:
 
 Coordinates are in decimal geographical format: DD.DDD.
 
-Example row: `37.9876550297;63.9347729125;1;25`
+Example row: `37.9876550297;63.9347729125;1;25`. 
+See [example file](https://github.com/AndreyAD1/process_bathymetry_data/blob/master/fairway_points.csv).
 
 ### Logger Coordinates <a name='logger_coordinates'></a>
 
@@ -101,6 +102,7 @@ Coordinates are in decimal geographical format: DD.DDD.
 Logger names coincide with sheet names in `*.xlsx` logger data file.
 
 Example row: `38.0392161806;63.9261588182;first_logger`
+See [example file](https://github.com/AndreyAD1/process_bathymetry_data/blob/master/logger_points.csv)
 
 ### Logger Data <a name='logger_data'></a>
 
@@ -115,6 +117,8 @@ Each sheet contains water elevation time series:
 ------------| ----
  01.01.2000 |  5       
  02.01.2000 |  4.95    
+ 
+ See [example file](https://github.com/AndreyAD1/process_bathymetry_data/blob/master/logger_data.xlsx)
 
 ### Bathymetry Data <a name='bathymetry_data'></a>
 
@@ -133,6 +137,7 @@ Coordinates are in decimal geographical format: DD.DDD.
 The first value in a datetime is a day.
 
 Example row: `38.28673531901094;63.82725462860046;2,5;107;0;0:00;15.08.2017 10:50;`
+See [example file](https://github.com/AndreyAD1/process_bathymetry_data/blob/master/bathymetry_data/Sonar0000_out_t.csv)
 
 ## Script Parameters <a name='script_parameters'></a>
 
