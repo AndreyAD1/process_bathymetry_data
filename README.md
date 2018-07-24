@@ -8,7 +8,7 @@ into bottom elevation.
 
 # Table of Contents
 
-1. [Project Goal](##Project Goal)
+1. [Project Goal](#project_goal)
 2. [Getting Started](##Getting Started)
     1. [How to Install](###How to Install)
     2. [Quick Start](###Quick Start)
@@ -21,7 +21,7 @@ into bottom elevation.
     2. [Script Parameters](###Script Parameters)
     3. [Output File Format](###Output File Format)
 
-# Project Goal
+# Project Goal <a name='project_goal'></a>
 We wanted to simplify processing of bathymetry data collected in tidal river
 estuary.
 
