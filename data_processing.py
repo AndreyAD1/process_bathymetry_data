@@ -154,15 +154,6 @@ def get_logger_data(xlsx_workbook):
     return all_loggers_data
 
 
-def get_invalid_input_points(dataset_list):
-    invalid_point_list = []
-    for dataset in dataset_list:
-        for point in dataset:
-            if not all(point.values()):
-                invalid_point_list.append(point)
-    return invalid_point_list
-
-
 def convert_geocoordinates_to_utm(dataset_list):
     dataset_with_coordinates = deepcopy(dataset_list)
     for dataset in dataset_with_coordinates:
@@ -436,12 +427,9 @@ if __name__ == "__main__":
         input_csv_filenames,
     )
     datasets = [bathymetry_points, fairway_points, logger_points]
-    invalid_points = get_invalid_input_points(datasets)
-
     utm_bathymetry, utm_fairway, utm_loggers = convert_geocoordinates_to_utm(
         datasets
     )
-
     bathymetry_points = get_distance_from_sea(utm_bathymetry, utm_fairway)
     logger_points = get_distance_from_sea(utm_loggers, utm_fairway)
     water_elevation_data = round_logger_datetime(water_elevation_data)
