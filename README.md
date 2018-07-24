@@ -9,17 +9,17 @@ into bottom elevation.
 # Table of Contents
 
 1. [Project Goal](#project_goal)
-2. [Getting Started](#Getting Started)
-    1. [How to Install](#How to Install)
-    2. [Quick Start](#Quick Start)
-3. [Detailed Description](#Detailed Description)
-    1. [Input File Formats](#Input File Formats)
-        1. [Fairway Coordinates](#Fairway Coordinates)
-        2. [Loggers Coordinates](#Loggers Coordinates)
-        3. [Logger Data](#Logger Data)
-        4. [Bathymetry Data](#Bathymetry Data)
-    2. [Script Parameters](#Script Parameters)
-    3. [Output File Format](#Output File Format)
+2. [Getting Started](#getting_started)
+    1. [How to Install](#how_to_install)
+    2. [Quick Start](#quick_start)
+3. [Detailed Description](#detailed_description)
+    1. [Input File Formats](#input_file_formats)
+        1. [Fairway Coordinates](#fairway_coordinates)
+        2. [Logger Coordinates](#logger_coordinates)
+        3. [Logger Data](#logger_data)
+        4. [Bathymetry Data](#bathymetry_data)
+    2. [Script Parameters](#script_parameters)
+    3. [Output File Format](#output_file_format)
 
 # Project Goal <a name='project_goal'></a>
 We wanted to simplify processing of bathymetry data collected in tidal river
@@ -33,9 +33,9 @@ and logger data (temporal variation of water elevation along river estuary).
 We decided to make this program to convert automatically every observed depth into a bottom 
 elevation.
 
-# Getting Started <a name='Getting Started'></a>
+# Getting Started <a name='getting_started'></a>
  
-## How to Install <a name='How to Install'></a>
+## How to Install <a name='how_to_install'></a>
 Python v3.5 should be already installed. Moreover, you should use `pip` to install 
 third-party Python modules (dependencies) which this script uses.
 The console command to install dependencies:
@@ -44,11 +44,11 @@ pip install -r requirements.txt # alternatively try pip3
 ```
 It is recommended to use virtual environment for better isolation.
 
-## Quick Start <a name='Quick Start'></a>
+## Quick Start <a name='quick_start'></a>
 
 1. Download the file `data_processing.py` from this repository.
 2. Put these files in the script`s directory (see file formats 
-in [Input File Formats](##Input File Formats)):
+in [Input File Formats](##input_file_formats)):
     1. `fairway_points.csv` - file with coordinates of points located along 
     river fairway; 
     2. `logger_points.csv` - file with loggers` coordinates;
@@ -66,16 +66,16 @@ Windows usage is the same.
 Having completed calculations the script creates the file `output.csv`
 containing bottom elevations and its coordinates.
 
-User can specify paths and names of all input and output files (see [Script Parameters](#Script Parameters)).
+User can specify paths and names of all input and output files (see [Script Parameters](#script_parameters)).
 
-# Detailed Description <a name='Detailed Description'></a>
+# Detailed Description <a name='detailed_description'></a>
 
-## Input File Formats <a name='Input File Formats'></a>
+## Input File Formats <a name='input_file_formats'></a>
 
 Developed to solve the specific task this script requires very specific and 
 even strange formats of input files.
 
-### Fairway Coordinates <a name='Fairway Coordinates'></a>
+### Fairway Coordinates <a name='fairway_coordinates></a>
 
 This `*.csv` file contains information about points located along
 fairway line of an estuary. Each file line contains four values separated 
@@ -89,7 +89,7 @@ Coordinates are in decimal geographical format: DD.DDD.
 
 Example row: `37.9876550297;63.9347729125;1;25`
 
-### Loggers` Coordinates <a name='Loggers` Coordinates'></a>
+### Logger Coordinates <a name='logger_coordinates'></a>
 
 This `*.csv` file contains information about logger locations. 
 Each file line contains three values separated by semicolons: 
@@ -102,7 +102,7 @@ Logger names coincide with sheet names in `*.xlsx` logger data file.
 
 Example row: `38.0392161806;63.9261588182;first_logger`
 
-### Logger Data <a name='Logger Data'></a>
+### Logger Data <a name='logger_data'></a>
 
 This `*.xlsx` file contains information about logger locations.
 Data collected by each logger mentioned in loggers\` coordinates `*.csv` file 
@@ -116,7 +116,7 @@ Each sheet contains water elevation time series:
  01.01.2000 |  5       
  02.01.2000 |  4.95    
 
-### Bathymetry Data <a name='Bathymetry Data'></a>
+### Bathymetry Data <a name='bathymetry_data'></a>
 
 By default `*.csv` files containing bathymetry data are located in 
 the folder `/bathymetry_data`.
@@ -134,7 +134,7 @@ The first value in a datetime is a day.
 
 Example row: `38.28673531901094;63.82725462860046;2,5;107;0;0:00;15.08.2017 10:50;`
 
-## Script Parameters <a name='Script Parameters'></a>
+## Script Parameters <a name='script_parameters'></a>
 
 The script has five optional parameters: 
 1. `-b`, `--bathymetry_directory` - path of directory containing `*.csv` 
@@ -148,7 +148,7 @@ time series of water elevation. By default: `logger_data.xlsx`;
 5. `-o`, `--output_filepath` - path of output `*.csv` file.
 By default: `output.csv`.
 
-## Output File Format <a name='Output File Format'></a>
+## Output File Format <a name='output_file_format'></a>
 
 The script outputs result in a `*.csv` file.
 Each file line contains eight values separated by semicolons:
