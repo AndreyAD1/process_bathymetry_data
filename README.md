@@ -6,6 +6,21 @@ Generally, this script gets water depths and water elevations,
 interpolates them spatially and temporally and converts every measured water depth
 into bottom elevation.
 
+# Table of Contents
+
+1. [Project Goal](##Project Goal)
+2. [Getting Started](##Getting Started)
+    1. [How to Install](###How to Install)
+    2. [Quick Start](###Quick Start)
+3. [Detailed Description](##Detailed Description)
+    1. [Input File Formats](###Input File Formats)
+        1. [Fairway Coordinates](####Fairway Coordinates)
+        2. [Loggers Coordinates](####Loggers Coordinates)
+        3. [Logger Data](####Logger Data)
+        4. [Bathymetry Data](####Bathymetry Data)
+    2. [Script Parameters](###Script Parameters)
+    3. [Output File Format](###Output File Format)
+
 # Project Goal
 We wanted to simplify processing of bathymetry data collected in tidal river
 estuary.
@@ -32,7 +47,8 @@ It is recommended to use virtual environment for better isolation.
 ## Quick Start
 
 1. Download the file `data_processing.py` from this repository.
-2. Put these files in the script`s directory (see file formats in **Input File Formats**):
+2. Put these files in the script`s directory (see file formats 
+in [Input File Formats](##Input File Formats)):
     1. `fairway_points.csv` - file with coordinates of points located along 
     river fairway; 
     2. `logger_points.csv` - file with loggers` coordinates;
@@ -50,7 +66,7 @@ Windows usage is the same.
 Having completed calculations the script creates the file `output.csv`
 containing bottom elevations and its coordinates.
 
-User can specify paths and names of all input and output files (see **Script Parameters**).
+User can specify paths and names of all input and output files (see [Script Parameters](#Script Parameters)).
 
 # Detailed Description
 
@@ -116,7 +132,7 @@ Each file line contains seven values separated by semicolons:
 Coordinates are in decimal geographical format: DD.DDD.
 The first value in a datetime is a day.
 
-Example row: `38.28673531901094;63.82725462860046;2,5;107;0;0:00;08.08.2017 10:50;`
+Example row: `38.28673531901094;63.82725462860046;2,5;107;0;0:00;15.08.2017 10:50;`
 
 ## Script Parameters
 
@@ -136,8 +152,8 @@ By default: `output.csv`.
 
 The script outputs result in a `*.csv` file.
 Each file line contains eight values separated by semicolons:
-- longitude,
-- latitude,
+- longitude (UTM),
+- latitude (UTM),
 - bottom elevation,
 - measurement time,
 - water elevation,
@@ -145,7 +161,7 @@ Each file line contains eight values separated by semicolons:
 - distance from a seashore,
 - path of bathymetry file containing this measurement point.
 
-Example row: `451190.7763006002;7090276.6680453;-4.604013707537601;07.08.17 21:58;1.0959862924623989;5.7;625.0;bathymetry_data/Sonar0161_out_t.csv`
+Example row: `451190.7;7090276.6;-4.6;07.08.17 21:58;1.09;5.7;625.0;bathymetry_data/Sonar01.csv`
 
 
  
