@@ -334,11 +334,10 @@ def print_about_filenotfounderror_and_exit(
 
 
 def print_about_wrong_file_format_and_exit(
-        bathymetry,
-        fairway_info,
-        logger_info,
+        input,
         csv_filenames
 ):
+    bathymetry, fairway_info, logger_info, water_elevation_info = input
     if bathymetry is None:
         exit(
             'The wrong format of data in {}.'.format(
@@ -357,6 +356,8 @@ def print_about_wrong_file_format_and_exit(
                 csv_filenames['logger_coordinates']
             )
         )
+    if water_elevation_info is None:
+        exit('The wrong format of *.xlsx file.')
     return
 
 
@@ -404,6 +405,21 @@ def get_input_filenames(script_arguments):
     return input_csv_filenames, water_elevation_filename
 
 
+def get_data_from_files_content(content):
+    bathymetry_data, fairway_data, loggers, xlsx_file_workbook = content
+    bathymetry_points = get_bathymetry_points(bathymetry_data)
+    fairway_points = get_fairway_points(fairway_data)
+    logger_points = get_logger_points(loggers)
+    water_elevation_data = get_logger_data(xlsx_file_workbook)
+    input_data = [
+        bathymetry_points,
+        fairway_points,
+        logger_points,
+        water_elevation_data
+    ]
+    return input_data
+
+
 if __name__ == "__main__":
     console_arguments = get_console_arguments()
     csv_filenames, xlsx_filename = get_input_filenames(console_arguments)
@@ -415,18 +431,13 @@ if __name__ == "__main__":
             xlsx_filename
         )
 
-    # imput_data = get_data_from_files_content(input_files_content)
-    bathymetry_data, fairway_data, loggers, xlsx_file_workbook = input_files_content
-    bathymetry_points = get_bathymetry_points(bathymetry_data)
-    fairway_points = get_fairway_points(fairway_data)
-    logger_points = get_logger_points(loggers)
-    water_elevation_data = get_logger_data(xlsx_file_workbook)
-    print_about_wrong_file_format_and_exit(
-        bathymetry_points,
-        fairway_points,
-        logger_points,
-        csv_filenames,
-    )
+    input_data = get_data_from_files_content(input_files_content)
+    if None in input_data:
+        print_about_wrong_file_format_and_exit(
+            input_data,
+            csv_filenames,
+        )
+    bathymetry_points, fairway_points, logger_points, water_elevation_data = input_data
     datasets = [bathymetry_points, fairway_points, logger_points]
     utm_bathymetry, utm_fairway, utm_loggers = convert_geocoordinates_to_utm(
         datasets
