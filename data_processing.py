@@ -74,16 +74,17 @@ def load_csv_data(file_name_list):
 
 
 def load_input_data(csv_file_names, xlsx_file_name):
-    csv_content = []
+    input_files_content = []
     for file_type in csv_file_names:
         filename_list = csv_file_names[file_type]
         data_of_single_input_type = load_csv_data(filename_list)
-        csv_content.append(data_of_single_input_type)
+        input_files_content.append(data_of_single_input_type)
     try:
         xlsx_workbook = load_workbook(xlsx_file_name, read_only=True)
     except FileNotFoundError:
         xlsx_workbook = None
-    return csv_content, xlsx_workbook
+    input_files_content.append(xlsx_workbook)
+    return input_files_content
 
 
 def get_bathymetry_points(point_list):
@@ -316,20 +317,18 @@ def get_bottom_elevation(bathymetry):
 
 
 def print_about_filenotfounderror_and_exit(
-        bathymetry,
-        points_along_fairway,
-        logger_data_points,
-        water_elevation_info,
+        input_content,
         csv_filenames,
         xlsx_filename
 ):
+    bathymetry, fairway, logger_data, water_elevation = input_content
     if bathymetry is None:
         exit('Can not find {}'.format(csv_filenames['bathymetry']))
-    if points_along_fairway is None:
+    if fairway is None:
         exit('Can not find {}'.format(csv_filenames['points_along_fairway']))
-    if logger_data_points is None:
+    if logger_data is None:
         exit('Can not find {}'.format(csv_filenames['logger_coordinates']))
-    if water_elevation_info is None:
+    if water_elevation is None:
         exit('Can not find {}'.format(xlsx_filename))
     return
 
@@ -390,32 +389,34 @@ def output_result(bathymetry_info, output_path):
             writer.writerow(point)
 
 
-if __name__ == "__main__":
-    console_arguments = get_console_arguments()
+def get_input_filenames(script_arguments):
     bathymetry_file_paths_list = get_bathymetry_file_paths(
-        console_arguments.bathymetry_directory
+        script_arguments.bathymetry_directory
     )
     # use OrderedDict() instance to correctly extract data
     # from output of "load_input_data()"
     input_csv_filenames = OrderedDict([
         ('bathymetry', bathymetry_file_paths_list),
-        ('points_along_fairway', [console_arguments.fairway_points_filepath]),
-        ('logger_coordinates', [console_arguments.logger_points_filepath])
+        ('points_along_fairway', [script_arguments.fairway_points_filepath]),
+        ('logger_coordinates', [script_arguments.logger_points_filepath])
     ])
-    water_elevation_filename = console_arguments.logger_data_filepath
-    csv_files_content, xlsx_file_workbook = load_input_data(
-        input_csv_filenames,
-        water_elevation_filename
-    )
-    bathymetry_data, fairway_data, loggers = csv_files_content
-    print_about_filenotfounderror_and_exit(
-        bathymetry_data,
-        fairway_data,
-        loggers,
-        xlsx_file_workbook,
-        input_csv_filenames,
-        water_elevation_filename
-    )
+    water_elevation_filename = script_arguments.logger_data_filepath
+    return input_csv_filenames, water_elevation_filename
+
+
+if __name__ == "__main__":
+    console_arguments = get_console_arguments()
+    csv_filenames, xlsx_filename = get_input_filenames(console_arguments)
+    input_files_content = load_input_data(csv_filenames, xlsx_filename)
+    if None in input_files_content:
+        print_about_filenotfounderror_and_exit(
+            input_files_content,
+            csv_filenames,
+            xlsx_filename
+        )
+
+    # imput_data = get_data_from_files_content(input_files_content)
+    bathymetry_data, fairway_data, loggers, xlsx_file_workbook = input_files_content
     bathymetry_points = get_bathymetry_points(bathymetry_data)
     fairway_points = get_fairway_points(fairway_data)
     logger_points = get_logger_points(loggers)
@@ -424,7 +425,7 @@ if __name__ == "__main__":
         bathymetry_points,
         fairway_points,
         logger_points,
-        input_csv_filenames,
+        csv_filenames,
     )
     datasets = [bathymetry_points, fairway_points, logger_points]
     utm_bathymetry, utm_fairway, utm_loggers = convert_geocoordinates_to_utm(
