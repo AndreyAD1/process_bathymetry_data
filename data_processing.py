@@ -259,13 +259,13 @@ def get_loggers_working_at_measurement_time(
         measurement_datetime
 ):
     not_working_logger_names = []
-    list_of_working_loggers = deepcopy(list_of_logger_points)
+    list_of_working_loggers = []
     for logger_name in logger_data:
         if measurement_datetime not in logger_data[logger_name]:
             not_working_logger_names.append(logger_name)
-    for logger_point in list_of_working_loggers:
-        if logger_point['logger_name'] in not_working_logger_names:
-            list_of_working_loggers.remove(logger_point)
+    for logger_point in list_of_logger_points:
+        if logger_point['logger_name'] not in not_working_logger_names:
+            list_of_working_loggers.append(logger_point)
     return list_of_working_loggers, not_working_logger_names
 
 
@@ -302,6 +302,8 @@ def get_water_elevation(bathymetry, logger_data_points, logger_traces):
             measurement_point['distance_from_seashore']
         )
         measurement_point['water_elevation'] = water_elevation
+        measurement_point['upper_logger'] = upper_log_name
+        measurement_point['lower_logger'] = lower_log_name
     return bathymetry_points, disabled_logs
 
 
@@ -379,7 +381,9 @@ def output_result(bathymetry_info, output_path):
         'water_elevation',
         'depth',
         'distance_from_seashore',
-        'filepath'
+        'filepath',
+        'upper_logger',
+        'lower_logger'
     ]
     with open(output_path, 'w', newline='', encoding='utf-8') as output_file:
         writer = csv.DictWriter(

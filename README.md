@@ -164,9 +164,11 @@ Each file line contains eight values separated by semicolons:
 - water elevation,
 - depth,
 - distance from a seashore,
-- path of bathymetry file containing this measurement point.
+- path of bathymetry file containing this measurement point,
+- name of upper logger used for calculation of water elevation,
+- name of lower logger used for calculation of water elevation.
 
-Example row: `451190.7;7090276.6;-4.6;07.08.17 21:58;1.09;5.7;625.0;bathymetry_data/Sonar01.csv`.
+Example row: `451190.7;7090276.6;-4.6;07.08.17 21:58;1.09;5.7;625.0;bathymetry_data/Sonar01.csv;21;18`.
 
 
  
