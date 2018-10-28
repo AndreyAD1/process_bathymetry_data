@@ -22,7 +22,7 @@ into bottom elevation.
     3. [Output File Format](#output_file_format)
 
 # Project Goal <a name='project_goal'></a>
-We wanted to simplify processing of bathymetry data collected in tidal river
+We want to simplify processing of bathymetry data collected in tidal river
 estuary.
 
 Surveying river estuary we deployed several loggers measuring water elevation
@@ -53,8 +53,8 @@ in [Input File Formats](##input_file_formats)):
     river fairway; 
     2. `logger_points.csv` - file with loggers` coordinates;
     3. `logger_data.xlsx` - file with time series of water elevation;
-3. Create folder `bathymetry/` in the script\`s directory ;
-4. Put files containing bathymetry data in the folder `bathymetry/` `*.csv` .
+3. Create a folder `bathymetry_data/` in the script`s directory ;
+4. Put `*.csv` files containing bathymetry data in the folder `bathymetry_data/`.
 
 To run script on Linux enter the command:
 ```bash
@@ -72,8 +72,8 @@ User can specify paths and names of all input and output files (see [Script Para
 
 ## Input File Formats <a name='input_file_formats'></a>
 
-Developed to solve the specific task this script requires very specific and 
-even strange formats of input files.
+Developed to solve the specific task this script requires input files with quite specific and 
+even strange formats.
 
 ### Fairway Coordinates <a name='fairway_coordinates'></a>
 
@@ -101,24 +101,24 @@ Each file line contains three values separated by semicolons:
 Coordinates are in decimal geographical format: DD.DDD. 
 Logger names coincide with sheet names in `*.xlsx` logger data file.
 
-Example row: `38.0392161806;63.9261588182;first_logger`
-See [example file](https://github.com/AndreyAD1/process_bathymetry_data/blob/master/logger_points.csv)
+Example row: `38.0392161806;63.9261588182;first_logger`.
+See [example file](https://github.com/AndreyAD1/process_bathymetry_data/blob/master/logger_points.csv).
 
 ### Logger Data <a name='logger_data'></a>
 
 This `*.xlsx` file contains information about logger locations.
 Data collected by each logger mentioned in loggers\` coordinates `*.csv` file 
-is located on separate sheet. Sheet names coincide with names in
+is located on separate sheet. Sheet names should coincide with names mentioned in
 the file containing loggers` coordinates.
 
-Each sheet contains water elevation time series:
+Each sheet contains column headers and water elevation time series:
 
  Datetime   | H, m 
 ------------| ----
  01.01.2000 |  5       
  02.01.2000 |  4.95    
  
- See [example file](https://github.com/AndreyAD1/process_bathymetry_data/blob/master/logger_data.xlsx)
+ See [example file](https://github.com/AndreyAD1/process_bathymetry_data/blob/master/logger_data.xlsx).
 
 ### Bathymetry Data <a name='bathymetry_data'></a>
 
@@ -136,7 +136,7 @@ Each file line contains seven values separated by semicolons:
 Coordinates are in decimal geographical format: DD.DDD.
 The first value in a datetime is a day.
 
-Example row: `38.28673531901094;63.82725462860046;2,5;107;0;0:00;15.08.2017 10:50;`
+Example row: `38.28673531901094;63.82725462860046;2,5;107;0;0:00;15.08.2017 10:50`.
 See [example file](https://github.com/AndreyAD1/process_bathymetry_data/blob/master/bathymetry_data/Sonar0000_out_t.csv)
 
 ## Script Parameters <a name='script_parameters'></a>
@@ -166,7 +166,7 @@ Each file line contains eight values separated by semicolons:
 - distance from a seashore,
 - path of bathymetry file containing this measurement point.
 
-Example row: `451190.7;7090276.6;-4.6;07.08.17 21:58;1.09;5.7;625.0;bathymetry_data/Sonar01.csv`
+Example row: `451190.7;7090276.6;-4.6;07.08.17 21:58;1.09;5.7;625.0;bathymetry_data/Sonar01.csv`.
 
 
  

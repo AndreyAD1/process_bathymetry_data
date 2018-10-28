@@ -92,7 +92,7 @@ def get_bathymetry_points(point_list):
     for point in point_list:
         feature_names = ['longitude', 'latitude', 'depth', 'time', 'filepath']
         try:
-            long, lat, depth, _, _, _, time, start_time, filepath = point
+            long, lat, depth, _, _, _, time, filepath = point
         except ValueError:
             return None
         try:
@@ -149,6 +149,8 @@ def get_logger_data(xlsx_workbook):
         logger_trace = {}
         for row in sheet.iter_rows(min_row=2, max_col=2):
             measurement_datetime = row[0].value
+            if measurement_datetime is None:
+                break
             elevation = row[1].value
             logger_trace[measurement_datetime] = elevation
         all_loggers_data[sheet.title] = logger_trace
@@ -340,7 +342,7 @@ def print_about_wrong_file_format_and_exit(
     bathymetry, fairway_info, logger_info, water_elevation_info = input
     if bathymetry is None:
         exit(
-            'The wrong format of data in {}.'.format(
+            'The wrong format of data in some of these files: {}.'.format(
                 csv_filenames['bathymetry']
             )
         )
