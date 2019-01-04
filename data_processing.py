@@ -1,90 +1,21 @@
-import argparse
-import os
 import csv
 import utm
 from math import hypot, inf
-from openpyxl import load_workbook
-from collections import OrderedDict
 from datetime import timedelta
 from itertools import tee
 from dateutil.parser import parse
 from copy import deepcopy
 
-
-def get_console_arguments():
-    argument_parser = argparse.ArgumentParser()
-    argument_parser.add_argument(
-        '-b',
-        '--bathymetry_directory',
-        default='bathymetry_data/',
-        help='Enter path of directory containing '
-             '*.csv files with bathymetry data.'
-    )
-    argument_parser.add_argument(
-        '-f',
-        '--fairway_points_filepath',
-        default='fairway_points.csv',
-        help='Enter path of *.csv file containing '
-             'points located along a fairway.'
-    )
-    argument_parser.add_argument(
-        '-l',
-        '--logger_points_filepath',
-        default='logger_points.csv',
-        help='Enter path of *.csv file containing '
-             'points where water elevation measurements provided.'
-    )
-    argument_parser.add_argument(
-        '-x',
-        '--logger_data_filepath',
-        default='logger_data.xlsx',
-        help='Enter path of *.xlsx file containing water elevation data.'
-    )
-    argument_parser.add_argument(
-        '-o',
-        '--output_filepath',
-        default='output.csv',
-        help='Enter path of *.csv file containing the script`s output.'
-    )
-    arguments = argument_parser.parse_args()
-    return arguments
-
-
-def get_bathymetry_file_paths(directory_path):
-    filename_list = []
-    for entry in os.scandir(directory_path):
-        file_root, file_extension = os.path.splitext(entry.path)
-        if file_extension == '.csv':
-            filename_list.append(entry.path)
-    return filename_list
-
-
-def load_csv_data(file_name_list):
-    data_list = []
-    try:
-        for file_path in file_name_list:
-            with open(file_path, 'r', encoding='utf-8') as input_file:
-                file_reader = csv.reader(input_file, delimiter=';')
-                for row in file_reader:
-                    row.append(file_path)
-                    data_list.append(row)
-        return data_list
-    except FileNotFoundError:
-        return None
-
-
-def load_input_data(csv_file_names, xlsx_file_name):
-    input_files_content = []
-    for file_type in csv_file_names:
-        filename_list = csv_file_names[file_type]
-        data_of_single_input_type = load_csv_data(filename_list)
-        input_files_content.append(data_of_single_input_type)
-    try:
-        xlsx_workbook = load_workbook(xlsx_file_name, read_only=True)
-    except FileNotFoundError:
-        xlsx_workbook = None
-    input_files_content.append(xlsx_workbook)
-    return input_files_content
+from input_data_loading import (
+    get_console_arguments,
+    get_input_filenames,
+    load_input_data,
+)
+from errors_and_warnings import (
+    print_about_filenotfounderror_and_exit,
+    print_about_wrong_file_format_and_exit,
+    print_invalid_points
+)
 
 
 def get_bathymetry_points(point_list):
@@ -320,58 +251,6 @@ def get_bottom_elevation(bathymetry):
     return bathymetry_with_bottom_elevation
 
 
-def print_about_filenotfounderror_and_exit(
-        input_content,
-        csv_filenames,
-        xlsx_filename
-):
-    bathymetry, fairway, logger_data, water_elevation = input_content
-    if bathymetry is None:
-        exit('Can not find {}'.format(csv_filenames['bathymetry']))
-    if fairway is None:
-        exit('Can not find {}'.format(csv_filenames['points_along_fairway']))
-    if logger_data is None:
-        exit('Can not find {}'.format(csv_filenames['logger_coordinates']))
-    if water_elevation is None:
-        exit('Can not find {}'.format(xlsx_filename))
-    return
-
-
-def print_about_wrong_file_format_and_exit(
-        input,
-        csv_filenames
-):
-    bathymetry, fairway_info, logger_info, water_elevation_info = input
-    if bathymetry is None:
-        exit(
-            'The wrong format of data in some of these files: {}.'.format(
-                csv_filenames['bathymetry']
-            )
-        )
-    if fairway_info is None:
-        exit(
-            'The wrong format of data in {}'.format(
-                csv_filenames['points_along_fairway']
-            )
-        )
-    if logger_info is None:
-        exit(
-            'The wrong format of data in {}'.format(
-                csv_filenames['logger_coordinates']
-            )
-        )
-    if water_elevation_info is None:
-        exit('The wrong format of *.xlsx file.')
-    return
-
-
-def print_invalid_points(points):
-    for point in points:
-        if not all(point.values()):
-            print('WARNING! Invalid point: {}'.format(point))
-    return
-
-
 def output_result(bathymetry_info, output_path):
     field_names = [
         'longitude',
@@ -394,21 +273,6 @@ def output_result(bathymetry_info, output_path):
         writer.writeheader()
         for point in bathymetry_info:
             writer.writerow(point)
-
-
-def get_input_filenames(script_arguments):
-    bathymetry_file_paths_list = get_bathymetry_file_paths(
-        script_arguments.bathymetry_directory
-    )
-    # use OrderedDict() instance to correctly extract data
-    # from output of "load_input_data()"
-    input_csv_filenames = OrderedDict([
-        ('bathymetry', bathymetry_file_paths_list),
-        ('points_along_fairway', [script_arguments.fairway_points_filepath]),
-        ('logger_coordinates', [script_arguments.logger_points_filepath])
-    ])
-    water_elevation_filename = script_arguments.logger_data_filepath
-    return input_csv_filenames, water_elevation_filename
 
 
 def get_data_from_files_content(content):
