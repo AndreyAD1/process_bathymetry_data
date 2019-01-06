@@ -14,7 +14,6 @@ def print_about_filenotfounderror_and_exit(
         exit('Can not find {}'.format(csv_filenames['logger_coordinates']))
     if water_elevation is None:
         exit('Can not find {}'.format(xlsx_filename))
-    return
 
 
 def print_about_wrong_file_format_and_exit(
@@ -42,11 +41,9 @@ def print_about_wrong_file_format_and_exit(
         )
     if water_elevation_info is None:
         exit('The wrong format of *.xlsx file.')
-    return
 
 
 def print_invalid_points(points):
     for point in points:
         if not all(point.values()):
             print('WARNING! Invalid point: {}'.format(point))
-    return
