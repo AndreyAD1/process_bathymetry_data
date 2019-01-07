@@ -102,18 +102,6 @@ class BathymetryPoint(Point):
         self.switched_on_loggers = switched_on_loggers
         self.switched_off_loggers = switched_off_loggers
 
-    @staticmethod
-    def get_distance_to_the_fairway_point(
-            fairway_point: FairwayPoint,
-            lat: float,
-            long: float
-    ) -> float:
-        distance = hypot(
-            fairway_point.latitude - lat,
-            fairway_point.longitude - long
-        )
-        return distance
-
     def get_distance_from_sea(self, points_along_fairway: list):
         closest_fairway_point = min(
             points_along_fairway,
