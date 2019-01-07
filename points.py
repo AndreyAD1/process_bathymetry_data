@@ -1,7 +1,7 @@
 from itertools import tee
-from math import hypot, inf
+from math import hypot
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import utm
 
 
@@ -10,7 +10,7 @@ class Point:
             self,
             latitude: float,
             longitude: float,
-            input_filepath: str =None
+            input_filepath: str = None
     ):
         self.latitude = latitude
         self.longitude = longitude
@@ -24,6 +24,56 @@ class Point:
         self.longitude = utm_long
 
 
+class FairwayPoint(Point):
+    def __init__(
+            self,
+            latitude: float,
+            longitude: float,
+            distance_from_sea: float,
+            input_filepath: str = ''
+    ):
+        super().__init__(latitude, longitude, input_filepath)
+        self.distance_from_sea = distance_from_sea
+        self.input_filepath = input_filepath
+
+
+class LoggerPoint(Point):
+    def __init__(
+            self,
+            logger_name,
+            latitude,
+            longitude,
+            input_filepath=None,
+            distance_from_sea=None,
+            logger_data=None,
+    ):
+        super().__init__(latitude, longitude, input_filepath)
+        self.logger_name = logger_name
+        self.distance_from_sea = distance_from_sea
+        self.logger_data = logger_data
+
+    def get_distance_from_sea(self, points_along_fairway: list):
+        closest_fairway_point = min(
+            points_along_fairway,
+            key=lambda x: hypot(
+                x.latitude - self.latitude,
+                x.longitude - self.longitude
+            )
+        )
+        self.distance_from_sea = closest_fairway_point.distance_from_sea
+
+    def round_logger_datetime(self):
+        rounded_logger_data = {}
+        for measurement_datetime, water_elevation in self.logger_data.items():
+            measurement_datetime += timedelta(seconds=30)
+            rounded_datetime = measurement_datetime - timedelta(
+                seconds=measurement_datetime.second,
+                microseconds=measurement_datetime.microsecond
+            )
+            rounded_logger_data[rounded_datetime] = water_elevation
+        self.logger_data = rounded_logger_data
+
+
 class BathymetryPoint(Point):
     def __init__(
             self,
@@ -35,8 +85,11 @@ class BathymetryPoint(Point):
             distance_from_sea: float = None,
             water_elevation: float = None,
             bottom_elevation: float = None,
-            upper_log_name: str = None,
-            lower_log_name: str = None
+            upper_logger: LoggerPoint = None,
+            lower_logger: LoggerPoint = None,
+            switched_on_loggers: list = [],
+            switched_off_loggers: list = [],
+
     ):
         super().__init__(latitude, longitude, input_filepath)
         self.measurement_datetime = measurement_datetime
@@ -44,63 +97,62 @@ class BathymetryPoint(Point):
         self.distance_from_sea = distance_from_sea
         self.water_elevation = water_elevation
         self.bottom_elevation = bottom_elevation
-        self.upper_logger_name = upper_log_name
-        self.lower_logger_name = lower_log_name
+        self.upper_logger = upper_logger
+        self.lower_logger = lower_logger
+        self.switched_on_loggers = switched_on_loggers
+        self.switched_off_loggers = switched_off_loggers
 
     @staticmethod
-    def get_distance_to_the_fairway_point(fairway_point: dict, lat, long):
-        fairway_point_lat = fairway_point['latitude']
-        fairway_point_long = fairway_point['longitude']
-        only_numbers = fairway_point_lat and fairway_point_long and lat and long
-        if only_numbers:
-            distance = hypot(fairway_point_lat - lat, fairway_point_long - long)
-            return distance
-        return inf
+    def get_distance_to_the_fairway_point(
+            fairway_point: FairwayPoint,
+            lat: float,
+            long: float
+    ) -> float:
+        distance = hypot(
+            fairway_point.latitude - lat,
+            fairway_point.longitude - long
+        )
+        return distance
 
-    def get_distance_from_sea(self, points_along_fairway: dict):
+    def get_distance_from_sea(self, points_along_fairway: list):
         closest_fairway_point = min(
             points_along_fairway,
-            key=lambda x: self.get_distance_to_the_fairway_point(
-                x,
-                self.latitude,
-                self.longitude
+            key=lambda x: hypot(
+                x.latitude - self.latitude,
+                x.longitude - self.longitude
             )
         )
-        self.distance_from_sea = float(
-            closest_fairway_point['distance_from_seashore']
-        )
+        self.distance_from_sea = closest_fairway_point.distance_from_sea
 
     def get_loggers_working_at_measurement_time(
             self,
-            list_of_logger_points,
-            logger_data,
+            loggers,
     ):
-        not_working_logger_names = []
-        list_of_working_loggers = []
-        for logger_name in logger_data:
-            if self.measurement_datetime not in logger_data[logger_name]:
-                not_working_logger_names.append(logger_name)
-        for logger_point in list_of_logger_points:
-            if logger_point['logger_name'] not in not_working_logger_names:
-                list_of_working_loggers.append(logger_point)
-        return list_of_working_loggers, not_working_logger_names
+        for logger in loggers:
+            if self.measurement_datetime not in logger.logger_data:
+                self.switched_off_loggers.append(logger.logger)
+            else:
+                self.switched_on_loggers.append(logger)
 
-    def get_nearest_loggers(self, logger_list):
-        logger_list.sort(key=lambda x: x['distance_from_seashore'])
-        logger_iterator, logger_iterator_duplicate = tee(logger_list)
+    def get_nearest_loggers(self):
+        self.switched_on_loggers.sort(key=lambda x: x.distance_from_sea)
+        logger_iterator, logger_iterator_duplicate = tee(
+            self.switched_on_loggers
+        )
         next(logger_iterator_duplicate)
         pairwise_logger_list = zip(logger_iterator, logger_iterator_duplicate)
 
         for lower_logger, upper_logger in pairwise_logger_list:
-            low_log_distance = lower_logger['distance_from_seashore']
-            up_log_distance = upper_logger['distance_from_seashore']
+            low_log_distance = lower_logger.distance_from_sea
+            up_log_distance = upper_logger.distance_from_sea
             if self.distance_from_sea < low_log_distance:
-                return lower_logger, upper_logger
+                self.lower_logger, self.upper_logger = lower_logger, upper_logger
+                return
             if low_log_distance <= self.distance_from_sea < up_log_distance:
-                return lower_logger, upper_logger
+                self.lower_logger, self.upper_logger = lower_logger, upper_logger
+                return
 
-        uppermost_loggers = (lower_logger, upper_logger)
-        return uppermost_loggers
+        self.lower_logger, self.upper_logger = lower_logger, upper_logger
 
     def interpolate_water_surface(
             self,
@@ -114,63 +166,19 @@ class BathymetryPoint(Point):
         water_elevation = water_slope * self.distance_from_sea + y_intercept
         return water_elevation
 
-    def get_water_elevation(self, logger_data_points, logger_traces):
-        working_logs, disabled_logs = self.get_loggers_working_at_measurement_time(
-            logger_data_points,
-            logger_traces,
-        )
-        lower_log, upper_log = self.get_nearest_loggers(
-            working_logs
-        )
-        lower_log_name = lower_log['logger_name']
-        upper_log_name = upper_log['logger_name']
-        lower_elevation = logger_traces[lower_log_name][self.measurement_datetime]
-        upper_elevation = logger_traces[upper_log_name][self.measurement_datetime]
+    def get_water_elevation(self, logger_points):
+        self.get_loggers_working_at_measurement_time(logger_points)
+        self.get_nearest_loggers()
+        lower_elevation = self.lower_logger.logger_data[self.measurement_datetime]
+        upper_elevation = self.upper_logger.logger_data[self.measurement_datetime]
         self.water_elevation = self.interpolate_water_surface(
             lower_elevation,
             upper_elevation,
-            lower_log['distance_from_seashore'],
-            upper_log['distance_from_seashore'],
+            self.lower_logger.distance_from_sea,
+            self.upper_logger.distance_from_sea,
         )
-        self.upper_logger_name = upper_log_name
-        self.lower_logger_name = lower_log_name
-        return disabled_logs
 
     def get_bottom_elevation(self):
         self.bottom_elevation = self.water_elevation - self.depth
 
 
-class LoggerPoint(Point):
-    def __init__(
-            self,
-            logger_name,
-            latitude,
-            longitude,
-            input_filepath=None,
-            distance_from_sea=None,
-            logger_data=None,
-            switched_on=True
-    ):
-        super().__init__(latitude, longitude, input_filepath)
-        self.name = logger_name
-        self.distance_from_sea = distance_from_sea
-        self.logger_data = logger_data
-        self.switched_on = switched_on
-
-    def get_logger_data(self):
-        self.logger_data = []
-
-    def check_switched_on_status(self):
-        pass
-
-
-class FairwayPoint(Point):
-    def __init__(
-            self,
-            latitude,
-            longitude,
-            distance_from_sea,
-            input_filepath=None
-    ):
-        super().__init__(latitude, longitude, input_filepath)
-        self.distance_from_sea = distance_from_sea
