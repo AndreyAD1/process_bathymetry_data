@@ -155,34 +155,50 @@ class BathymetryPoint(Point):
 
         self.lower_logger, self.upper_logger = lower_logger, upper_logger
 
-    def interpolate_water_surface(
-            self,
-            lower_level,
-            upper_level,
-            lower_distance,
-            upper_distance,
-    ):
-        water_slope = (lower_level - upper_level) / (lower_distance - upper_distance)
-        y_intercept = upper_level - water_slope * upper_distance
-        water_elevation = water_slope * self.distance_from_sea + y_intercept
+    @staticmethod
+    def interpolate_water_level(
+            lower_level: float,
+            upper_level: float,
+            x1: float,
+            x2: float,
+            desired_x: float
+    ) -> float:
+        water_slope = (lower_level - upper_level) / (x1 - x2)
+        y_intercept = upper_level - water_slope * x2
+        water_elevation = water_slope * desired_x + y_intercept
         return water_elevation
 
-    def get_water_elevation(self, logger_points):
+    def get_water_elevation(self, logger_points: list):
         self.get_loggers_working_at_measurement_time(logger_points)
         self.get_nearest_loggers()
-        # low_logger_closest_times = self.get_closest_logger_times(self.lower_logger)
-        # up_logger_closest_times = self.get_closest_logger_times(self.upper_logger)
-        # lower_elevation = self.get_water_level_at_measurement_time(
-        #     low_logger_closest_times,
-        #     self.lower_logger
-        # )
-        lower_elevation = self.lower_logger.logger_data[self.measurement_datetime]
-        upper_elevation = self.upper_logger.logger_data[self.measurement_datetime]
-        self.water_elevation = self.interpolate_water_surface(
+        earlier_time, later_time = self.get_closest_logger_times(
+            self.lower_logger
+        )
+        assert None not in (earlier_time, later_time)
+        lower_elevation = self.interpolate_water_level(
+            self.lower_logger.logger_data[earlier_time],
+            self.lower_logger.logger_data[later_time],
+            earlier_time.timestamp(),
+            later_time.timestamp(),
+            self.measurement_datetime.timestamp()
+        )
+        earlier_time, later_time = self.get_closest_logger_times(
+            self.upper_logger
+        )
+        assert None not in (earlier_time, later_time)
+        upper_elevation = self.interpolate_water_level(
+            self.upper_logger.logger_data[earlier_time],
+            self.upper_logger.logger_data[later_time],
+            earlier_time.timestamp(),
+            later_time.timestamp(),
+            self.measurement_datetime.timestamp()
+        )
+        self.water_elevation = self.interpolate_water_level(
             lower_elevation,
             upper_elevation,
             self.lower_logger.distance_from_sea,
             self.upper_logger.distance_from_sea,
+            self.distance_from_sea
         )
 
     def get_bottom_elevation(self):

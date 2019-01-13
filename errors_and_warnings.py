@@ -20,7 +20,7 @@ def print_about_wrong_file_format_and_exit(
         input_data,
         csv_filenames
 ):
-    bathymetry, fairway_info, logger_info, water_elevation_info = input_data
+    bathymetry, fairway_info, logger_info = input_data
     if bathymetry is None:
         exit(
             'The wrong format of data in some of these files: {}.'.format(
@@ -39,8 +39,6 @@ def print_about_wrong_file_format_and_exit(
                 csv_filenames['logger_coordinates']
             )
         )
-    if water_elevation_info is None:
-        exit('The wrong format of *.xlsx file.')
 
 
 def print_invalid_points(points):

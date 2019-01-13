@@ -161,7 +161,6 @@ if __name__ == "__main__":
     [point.convert_geocoordinates_to_utm() for point in logger_points]
     [point.get_distance_from_sea(fairway_points) for point in bathymetry_points]
     [point.get_distance_from_sea(fairway_points) for point in logger_points]
-    [point.round_logger_datetime() for point in logger_points]
     [point.get_water_elevation(logger_points) for point in bathymetry_points]
     for point in bathymetry_points:
         if point.switched_off_loggers:
