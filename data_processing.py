@@ -169,11 +169,11 @@ if __name__ == "__main__":
                 """
                 WARNING! 
                 These loggers have no data for the point measured at {}
-                (from the input file {}): {}
-                """.format(
+                (from the input file {}): 
+                {}""".format(
                     point.measurement_datetime,
                     point.input_filepath,
-                    point.switched_off_loggers
+                    [l.logger_name for l in point.switched_off_loggers]
                 )
             )
     [point.get_bottom_elevation() for point in bathymetry_points]

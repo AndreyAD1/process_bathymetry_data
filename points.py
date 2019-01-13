@@ -87,9 +87,6 @@ class BathymetryPoint(Point):
             bottom_elevation: float = None,
             upper_logger: LoggerPoint = None,
             lower_logger: LoggerPoint = None,
-            switched_on_loggers: list = [],
-            switched_off_loggers: list = [],
-
     ):
         super().__init__(latitude, longitude, input_filepath)
         self.measurement_datetime = measurement_datetime
@@ -99,8 +96,8 @@ class BathymetryPoint(Point):
         self.bottom_elevation = bottom_elevation
         self.upper_logger = upper_logger
         self.lower_logger = lower_logger
-        self.switched_on_loggers = switched_on_loggers
-        self.switched_off_loggers = switched_off_loggers
+        self.switched_on_loggers = []
+        self.switched_off_loggers = []
 
     def get_distance_from_sea(self, points_along_fairway: list):
         closest_fairway_point = min(
@@ -112,15 +109,31 @@ class BathymetryPoint(Point):
         )
         self.distance_from_sea = closest_fairway_point.distance_from_sea
 
+    def get_closest_logger_times(self, logger: LoggerPoint) -> tuple:
+        logger_datetimes = list(logger.logger_data.keys())
+        logger_datetimes.sort()
+        previous_logger_time = None
+        for logger_time in logger_datetimes:
+            if self.measurement_datetime < logger_time:
+                return previous_logger_time, logger_time
+            previous_logger_time = logger_time
+        return previous_logger_time, None
+
     def get_loggers_working_at_measurement_time(
             self,
             loggers,
     ):
+        switch_off_threshold = timedelta(minutes=15)
         for logger in loggers:
-            if self.measurement_datetime not in logger.logger_data:
-                self.switched_off_loggers.append(logger.logger)
-            else:
+            closest_logger_times = self.get_closest_logger_times(logger)
+            if None in closest_logger_times:
+                self.switched_off_loggers.append(logger)
+                continue
+            time_difference = closest_logger_times[1] - closest_logger_times[0]
+            if time_difference < switch_off_threshold:
                 self.switched_on_loggers.append(logger)
+            else:
+                self.switched_off_loggers.append(logger)
 
     def get_nearest_loggers(self):
         self.switched_on_loggers.sort(key=lambda x: x.distance_from_sea)
@@ -157,6 +170,12 @@ class BathymetryPoint(Point):
     def get_water_elevation(self, logger_points):
         self.get_loggers_working_at_measurement_time(logger_points)
         self.get_nearest_loggers()
+        # low_logger_closest_times = self.get_closest_logger_times(self.lower_logger)
+        # up_logger_closest_times = self.get_closest_logger_times(self.upper_logger)
+        # lower_elevation = self.get_water_level_at_measurement_time(
+        #     low_logger_closest_times,
+        #     self.lower_logger
+        # )
         lower_elevation = self.lower_logger.logger_data[self.measurement_datetime]
         upper_elevation = self.upper_logger.logger_data[self.measurement_datetime]
         self.water_elevation = self.interpolate_water_surface(
