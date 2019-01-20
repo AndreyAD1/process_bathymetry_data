@@ -1,44 +1,34 @@
+import pprint
+
+
+class InvalidFile:
+    def __init__(self, filename: str, invalid_row: ''):
+        self.filename = filename
+        self.invalid_row = invalid_row
+
+    def print_invalid_string(self):
+        print('The file {} contains an invalid string: {}').format(
+            self.filename,
+            self.invalid_row
+        )
 
 
 def print_about_filenotfounderror_and_exit(
-        input_content,
-        csv_filenames,
-        xlsx_filename
+        invalid_file_paths,
 ):
-    bathymetry, fairway, logger_data, water_elevation = input_content
-    if bathymetry is None:
-        exit('Can not find {}'.format(csv_filenames['bathymetry']))
-    if fairway is None:
-        exit('Can not find {}'.format(csv_filenames['points_along_fairway']))
-    if logger_data is None:
-        exit('Can not find {}'.format(csv_filenames['logger_coordinates']))
-    if water_elevation is None:
-        exit('Can not find {}'.format(xlsx_filename))
+    print('ERROR. Can not find these files:')
+    pprint.pprint(invalid_file_paths)
+    exit()
 
 
-def print_about_wrong_file_format_and_exit(
-        input_data,
-        csv_filenames
-):
-    bathymetry, fairway_info, logger_info = input_data
-    if bathymetry is None:
-        exit(
-            'The wrong format of data in some of these files: {}.'.format(
-                csv_filenames['bathymetry']
-            )
+def print_about_wrong_file_format_and_exit(invalid_file_list: list):
+    print('ERROR. These files have a wrong format:')
+    for file in invalid_file_list:
+        print('Invalid file: {}. Invalid row: {}'.format(
+            file.filename,
+            file.invalid_row)
         )
-    if fairway_info is None:
-        exit(
-            'The wrong format of data in {}'.format(
-                csv_filenames['points_along_fairway']
-            )
-        )
-    if logger_info is None:
-        exit(
-            'The wrong format of data in {}'.format(
-                csv_filenames['logger_coordinates']
-            )
-        )
+    exit()
 
 
 def print_invalid_points(points):

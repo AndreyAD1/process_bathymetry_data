@@ -1,5 +1,5 @@
 import argparse
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 import os
 import csv
 
@@ -70,28 +70,30 @@ def get_input_filenames(script_arguments):
 
 
 def load_csv_data(file_name_list):
-    data_list = []
-    try:
-        for file_path in file_name_list:
+    csv_data = defaultdict(list)
+    invalid_filepaths = []
+    for file_path in file_name_list:
+        try:
             with open(file_path, 'r', encoding='utf-8') as input_file:
                 file_reader = csv.reader(input_file, delimiter=';')
                 for row in file_reader:
-                    row.append(file_path)
-                    data_list.append(row)
-        return data_list
-    except FileNotFoundError:
-        return None
+                    csv_data[file_path].append(row)
+        except FileNotFoundError:
+            invalid_filepaths.append(file_path)
+            continue
+    return csv_data, invalid_filepaths
 
 
 def load_input_data(csv_file_names, xlsx_file_name):
     input_files_content = []
-    for file_type in csv_file_names:
-        filename_list = csv_file_names[file_type]
-        data_of_single_input_type = load_csv_data(filename_list)
-        input_files_content.append(data_of_single_input_type)
+    invalid_file_paths = []
+    for file_type, filename_list in csv_file_names.items():
+        csv_data, invalid_files = load_csv_data(filename_list)
+        input_files_content.append(csv_data)
+        invalid_file_paths.extend(invalid_files)
     try:
         xlsx_workbook = load_workbook(xlsx_file_name, read_only=True)
+        input_files_content.append(xlsx_workbook)
     except FileNotFoundError:
-        xlsx_workbook = None
-    input_files_content.append(xlsx_workbook)
-    return input_files_content
+        invalid_file_paths.append(xlsx_file_name)
+    return input_files_content, invalid_file_paths
