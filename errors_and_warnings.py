@@ -28,7 +28,6 @@ def print_about_wrong_file_format_and_exit(invalid_file_list: list):
             file.filename,
             file.invalid_row)
         )
-    exit()
 
 
 def print_invalid_points(points):
