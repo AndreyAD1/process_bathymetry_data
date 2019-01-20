@@ -9,7 +9,7 @@ from input_data_loading import (
 from errors_and_warnings import (
     InvalidFile,
     print_about_filenotfounderror_and_exit,
-    print_about_wrong_file_format_and_exit,
+    print_about_wrong_file_format,
     print_invalid_points
 )
 from points import BathymetryPoint, FairwayPoint, LoggerPoint
@@ -164,7 +164,7 @@ if __name__ == "__main__":
     input_data, invalid_files = get_data_from_files_content(input_files_content)
 
     if invalid_files:
-        print_about_wrong_file_format_and_exit(invalid_files)
+        print_about_wrong_file_format(invalid_files)
 
     bathymetry_points, fairway_points, logger_points = input_data
     [point.convert_geocoordinates_to_utm() for point in bathymetry_points]

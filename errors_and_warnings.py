@@ -6,8 +6,8 @@ class InvalidFile:
         self.filename = filename
         self.invalid_row = invalid_row
 
-    def print_invalid_string(self):
-        print('The file {} contains an invalid string: {}').format(
+    def __str__(self):
+        return 'Invalid file: {}. Invalid row: {}'.format(
             self.filename,
             self.invalid_row
         )
@@ -21,13 +21,9 @@ def print_about_filenotfounderror_and_exit(
     exit()
 
 
-def print_about_wrong_file_format_and_exit(invalid_file_list: list):
+def print_about_wrong_file_format(invalid_file_list: list):
     print('ERROR. These files have a wrong format:')
-    for file in invalid_file_list:
-        print('Invalid file: {}. Invalid row: {}'.format(
-            file.filename,
-            file.invalid_row)
-        )
+    [print(file) for file in invalid_file_list]
 
 
 def print_invalid_points(points):
