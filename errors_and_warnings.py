@@ -16,13 +16,13 @@ class InvalidFile:
 def print_about_filenotfounderror_and_exit(
         invalid_file_paths,
 ):
-    print('ERROR. Can not find these files:')
+    print('ERROR! Can not find these files:')
     pprint.pprint(invalid_file_paths)
     exit()
 
 
 def print_about_wrong_file_format(invalid_file_list: list):
-    print('ERROR. These files have a wrong format:')
+    print('WARNING! These files have a wrong format:')
     [print(file) for file in invalid_file_list]
 
 

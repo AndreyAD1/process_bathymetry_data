@@ -1,4 +1,5 @@
 import csv
+
 from dateutil.parser import parse
 
 from input_data_loading import (
@@ -29,18 +30,22 @@ def get_bathymetry_points(bathymetry_data: dict) -> tuple:
                 depth = float(depth.replace(',', '.'))
             except ValueError:
                 depth = None
-            measurement_datetime = parse(
-                datetime_str,
-                dayfirst=True,
-                yearfirst=False
-            )
-            bathymetry_point = BathymetryPoint(
-                float(lat),
-                float(long),
-                measurement_datetime,
-                depth,
-                input_filepath=file
-            )
+            try:
+                measurement_datetime = parse(
+                    datetime_str,
+                    dayfirst=True,
+                    yearfirst=False
+                )
+                bathymetry_point = BathymetryPoint(
+                    float(lat),
+                    float(long),
+                    measurement_datetime,
+                    depth,
+                    input_filepath=file
+                )
+            except ValueError:
+                invalid_files_list.append(InvalidFile(file, point))
+                break
             bathymetry_list.append(bathymetry_point)
     return bathymetry_list, invalid_files_list
 
@@ -139,10 +144,10 @@ def output_result(bathymetry_points, output_path):
                 [
                     point.longitude,
                     point.latitude,
-                    point.bottom_elevation,
+                    round(point.bottom_elevation, 2),
                     point.measurement_datetime,
-                    point.water_elevation,
-                    point.depth,
+                    round(point.water_elevation, 2),
+                    round(point.depth, 2),
                     point.distance_from_sea,
                     point.input_filepath,
                     point.upper_logger.logger_name,

@@ -1,7 +1,9 @@
+from collections import OrderedDict
+from datetime import datetime, timedelta
 from itertools import tee
 from math import hypot
+from typing import Dict
 
-from datetime import datetime, timedelta
 import utm
 
 
@@ -40,17 +42,19 @@ class FairwayPoint(Point):
 class LoggerPoint(Point):
     def __init__(
             self,
-            logger_name,
-            latitude,
-            longitude,
-            input_filepath=None,
-            distance_from_sea=None,
-            logger_data=None,
+            logger_name: str,
+            latitude: float,
+            longitude: float,
+            input_filepath: str = '',
+            distance_from_sea: float = None,
+            logger_data: Dict = None,
     ):
         super().__init__(latitude, longitude, input_filepath)
         self.logger_name = logger_name
         self.distance_from_sea = distance_from_sea
-        self.logger_data = logger_data
+        self.logger_data = OrderedDict(
+            sorted(logger_data.items(), key=lambda t: t[0])
+        )
 
     def get_distance_from_sea(self, points_along_fairway: list):
         closest_fairway_point = min(
@@ -111,7 +115,6 @@ class BathymetryPoint(Point):
 
     def get_closest_logger_times(self, logger: LoggerPoint) -> tuple:
         logger_datetimes = list(logger.logger_data.keys())
-        logger_datetimes.sort()
         previous_logger_time = None
         for logger_time in logger_datetimes:
             if self.measurement_datetime < logger_time:
