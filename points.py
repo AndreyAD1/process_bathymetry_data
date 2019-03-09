@@ -1,3 +1,4 @@
+import bisect
 from collections import OrderedDict
 from datetime import datetime, timedelta
 from itertools import tee
@@ -115,12 +116,20 @@ class BathymetryPoint(Point):
 
     def get_closest_logger_times(self, logger: LoggerPoint) -> tuple:
         logger_datetimes = list(logger.logger_data.keys())
-        previous_logger_time = None
-        for logger_time in logger_datetimes:
-            if self.measurement_datetime < logger_time:
-                return previous_logger_time, logger_time
-            previous_logger_time = logger_time
-        return previous_logger_time, None
+        closest_earlier_index = bisect.bisect_right(
+            logger_datetimes,
+            self.measurement_datetime
+        )
+        # logger trace started after the measurement time
+        if closest_earlier_index == 0:
+            return None, logger_datetimes[closest_earlier_index]
+        # logger trace ended before measurement time
+        if closest_earlier_index == len(logger_datetimes):
+            return logger_datetimes[closest_earlier_index], None
+
+        closest_earlier_time = logger_datetimes[closest_earlier_index - 1]
+        closest_later_time = logger_datetimes[closest_earlier_index]
+        return closest_earlier_time, closest_later_time
 
     def get_loggers_working_at_measurement_time(
             self,

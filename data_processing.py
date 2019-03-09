@@ -185,7 +185,8 @@ if __name__ == "__main__":
                 WARNING! 
                 These loggers have no data for the point measured at {}
                 (from the input file {}): 
-                {}""".format(
+                {}
+                """.format(
                     point.measurement_datetime,
                     point.input_filepath,
                     [l.logger_name for l in point.switched_off_loggers]
