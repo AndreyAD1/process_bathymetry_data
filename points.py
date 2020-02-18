@@ -26,6 +26,13 @@ class Point:
         self.latitude = utm_lat
         self.longitude = utm_long
 
+    def __str__(self):
+        return "Latitude: {}, longitude: {}, input file: {}".format(
+                self.latitude, 
+                self.longitude, 
+                self.input_filepath
+            )
+
 
 class FairwayPoint(Point):
     def __init__(
@@ -125,7 +132,7 @@ class BathymetryPoint(Point):
             return None, logger_datetimes[closest_earlier_index]
         # logger trace ended before measurement time
         if closest_earlier_index == len(logger_datetimes):
-            return logger_datetimes[closest_earlier_index], None
+            return logger_datetimes[closest_earlier_index - 1], None
 
         closest_earlier_time = logger_datetimes[closest_earlier_index - 1]
         closest_later_time = logger_datetimes[closest_earlier_index]
@@ -147,7 +154,7 @@ class BathymetryPoint(Point):
             else:
                 self.switched_off_loggers.append(logger)
 
-    def get_nearest_loggers(self):
+    def get_nearest_working_loggers(self):
         self.switched_on_loggers.sort(key=lambda x: x.distance_from_sea)
         logger_iterator, logger_iterator_duplicate = tee(
             self.switched_on_loggers
@@ -182,7 +189,10 @@ class BathymetryPoint(Point):
 
     def get_water_elevation(self, logger_points: list):
         self.get_loggers_working_at_measurement_time(logger_points)
-        self.get_nearest_loggers()
+        if len(self.switched_on_loggers) < 2:
+            self.water_elevation = None
+            return
+        self.get_nearest_working_loggers()
         earlier_time, later_time = self.get_closest_logger_times(
             self.lower_logger
         )
@@ -214,6 +224,9 @@ class BathymetryPoint(Point):
         )
 
     def get_bottom_elevation(self):
-        self.bottom_elevation = self.water_elevation - self.depth
+        if self.water_elevation:
+            self.bottom_elevation = self.water_elevation - self.depth
+        else:
+            self.bottom_elevation = None
 
 

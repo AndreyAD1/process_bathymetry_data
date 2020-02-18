@@ -140,18 +140,33 @@ def output_result(bathymetry_points, output_path):
         writer = csv.writer(output_file)
         writer.writerow(column_names)
         for point in bathymetry_points:
+            bottom_elevation, water_elevation = None, None
+            upper_logger_name, lower_logger_name = None, None
+
+            if point.bottom_elevation:
+                bottom_elevation = round(point.bottom_elevation, 2)
+
+            if point.water_elevation:
+                water_elevation = round(point.water_elevation, 2)
+
+            if point.upper_logger:
+                upper_logger_name = point.upper_logger.logger_name
+
+            if point.lower_logger:
+                lower_logger_name = point.lower_logger.logger_name
+
             writer.writerow(
                 [
                     point.longitude,
                     point.latitude,
-                    round(point.bottom_elevation, 2),
+                    bottom_elevation,
                     point.measurement_datetime,
-                    round(point.water_elevation, 2),
+                    water_elevation,
                     round(point.depth, 2),
                     point.distance_from_sea,
                     point.input_filepath,
-                    point.upper_logger.logger_name,
-                    point.lower_logger.logger_name
+                    upper_logger_name,
+                    lower_logger_name
                 ]
             )
 
@@ -182,18 +197,21 @@ if __name__ == "__main__":
         if point.switched_off_loggers:
             print(
                 """
-                WARNING! 
-                These loggers have no data for the point measured at {}
-                (from the input file {}): 
-                {}
-                """.format(
-                    point.measurement_datetime,
-                    point.input_filepath,
-                    [l.logger_name for l in point.switched_off_loggers]
-                )
+                WARNING! These loggers have no data for the point: {}.
+                """.format(point)
             )
+
+        if len(point.switched_on_loggers) < 2:
+            print(
+                """
+                WARNING! 
+                Less than 2 loggers were working when depth was measured 
+                at the point: {}.
+                Can not calculate the bottom elevation for this point.
+                """.format(point)
+            )
+
     [point.get_bottom_elevation() for point in bathymetry_points]
-    # print_invalid_points(bathymetry_points_with_bottom_elevation)
     output_result(
         bathymetry_points,
         console_arguments.output_filepath
